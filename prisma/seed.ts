@@ -1,12 +1,6 @@
 import "dotenv/config";
-import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient, Sign } from "@prisma/client";
-
-const adapter = new PrismaPg({
-  connectionString: process.env.DATABASE_URL,
-});
-
-const prisma = new PrismaClient({ adapter });
+import { SIGN_VALUES, type Sign } from "../src/lib/astrology";
+import { prisma } from "../src/lib/prisma";
 
 const defaultPlanets = [
   { code: "sun", label: "שמש", sortOrder: 0 },
@@ -17,20 +11,8 @@ const defaultPlanets = [
   { code: "jupiter", label: "צדק", sortOrder: 5 },
   { code: "saturn", label: "שבתאי", sortOrder: 6 },
 ];
-const signsByHouse: Sign[] = [
-  "aries",
-  "taurus",
-  "gemini",
-  "cancer",
-  "leo",
-  "virgo",
-  "libra",
-  "scorpio",
-  "sagittarius",
-  "capricorn",
-  "aquarius",
-  "pisces",
-];
+const signsByHouse: Sign[] = [...SIGN_VALUES];
+type SeedPlanet = { id: string; code: string; label: string };
 
 async function main() {
   await prisma.interpretation.deleteMany();
@@ -93,7 +75,7 @@ async function main() {
     });
   }
 
-  const sun = planets.find((planet) => planet.code === "sun");
+  const sun = planets.find((planet: SeedPlanet) => planet.code === "sun");
   if (!sun) {
     throw new Error("Sun planet seed was not created");
   }

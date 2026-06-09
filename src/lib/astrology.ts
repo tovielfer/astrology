@@ -1,4 +1,4 @@
-const SIGN_VALUES = [
+export const SIGN_VALUES = [
   "aries",
   "taurus",
   "gemini",

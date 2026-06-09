@@ -1,9 +1,11 @@
-import { InterpretationType, Sign } from "@prisma/client";
+import { SIGN_VALUES } from "@/lib/astrology";
 import { z } from "zod";
 
+const INTERPRETATION_TYPES = ["house", "sign", "mixed"] as const;
+
 export const planetIdSchema = z.string().trim().min(1, "Planet is required");
-export const signSchema = z.nativeEnum(Sign);
-export const interpretationTypeSchema = z.nativeEnum(InterpretationType);
+export const signSchema = z.enum(SIGN_VALUES);
+export const interpretationTypeSchema = z.enum(INTERPRETATION_TYPES);
 
 export const personSchema = z.object({
   name: z.string().trim().min(1, "Name is required"),

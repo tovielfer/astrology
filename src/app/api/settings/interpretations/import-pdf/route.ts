@@ -5,6 +5,8 @@ import { planetIdSchema } from "@/lib/validation";
 
 export const runtime = "nodejs";
 
+type PlanetLabel = { label: string };
+
 export async function POST(request: Request) {
   const formData = await request.formData();
   const planetId = planetIdSchema.parse(formData.get("planetId"));
@@ -21,7 +23,7 @@ export async function POST(request: Request) {
   const planets = await getAllPlanets();
   const rows = await extractInterpretationRowsFromPdf(
     new Uint8Array(await file.arrayBuffer()),
-    planets.map((planet) => planet.label),
+    planets.map((planet: PlanetLabel) => planet.label),
   );
 
   if (rows.length === 0) {
