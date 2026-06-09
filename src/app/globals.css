@@ -1,0 +1,353 @@
+:root {
+  --background: #fbf7f0;
+  --card: #ffffff;
+  --text: #2f261f;
+  --muted: #74675d;
+  --border: #e8dccb;
+  --accent: #7a5438;
+  --accent-dark: #553724;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--text);
+  font-family: Arial, sans-serif;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  border: 0;
+  border-radius: 10px;
+  background: var(--accent);
+  color: white;
+  cursor: pointer;
+  padding: 10px 16px;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.file-button {
+  border-radius: 10px;
+  background: var(--accent);
+  color: white;
+  cursor: pointer;
+  display: inline-block;
+  padding: 10px 16px;
+}
+
+.file-button.disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.file-button input {
+  display: none;
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+textarea {
+  min-height: 110px;
+  resize: vertical;
+}
+
+a {
+  color: var(--accent-dark);
+}
+
+.link-button {
+  background: var(--accent);
+  border-radius: 10px;
+  color: white;
+  display: inline-block;
+  padding: 10px 16px;
+  text-decoration: none;
+}
+
+.page {
+  margin: 0 auto;
+  max-width: 1180px;
+  padding: 32px 20px 56px;
+}
+
+.settings-page {
+  max-width: none;
+  width: 100%;
+}
+
+.hero {
+  margin-bottom: 24px;
+}
+
+.hero h1 {
+  font-size: 34px;
+  margin: 0 0 8px;
+}
+
+.hero p {
+  color: var(--muted);
+  margin: 0;
+}
+
+.hero-row {
+  align-items: flex-start;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+.header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.grid {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: 0 12px 30px rgba(85, 55, 36, 0.06);
+  padding: 20px;
+}
+
+.card h2 {
+  margin: 0 0 16px;
+}
+
+.form-stack {
+  display: grid;
+  gap: 12px;
+}
+
+.field label {
+  color: var(--muted);
+  display: block;
+  font-size: 14px;
+  margin-bottom: 6px;
+}
+
+.table {
+  display: grid;
+  gap: 8px;
+}
+
+.position-row {
+  align-items: center;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 1fr 90px 1fr;
+}
+
+.person-list {
+  display: grid;
+  gap: 10px;
+}
+
+.person-button {
+  background: #f5ebdc;
+  color: var(--text);
+  text-align: right;
+}
+
+.person-button.active {
+  background: var(--accent);
+  color: white;
+}
+
+.status {
+  color: var(--muted);
+  font-size: 14px;
+  margin-top: 10px;
+}
+
+.error {
+  color: #a33a2b;
+}
+
+.success {
+  color: #2f6b3d;
+}
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.tab-button {
+  background: #f5ebdc;
+  color: var(--text);
+}
+
+.tab-button.active {
+  background: var(--accent);
+  color: white;
+}
+
+.settings-toolbar {
+  align-items: center;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.settings-toolbar h2 {
+  margin: 0;
+}
+
+.toolbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.toolbar-actions input {
+  min-width: 220px;
+  width: auto;
+}
+
+.settings-table-wrap {
+  overflow-x: auto;
+}
+
+.settings-table {
+  border-collapse: collapse;
+  min-width: 100%;
+  width: max-content;
+}
+
+.settings-table th,
+.settings-table td {
+  border: 1px solid var(--border);
+  padding: 10px;
+  vertical-align: top;
+}
+
+.settings-table th {
+  background: #f7efe4;
+  color: var(--muted);
+  font-weight: 700;
+  min-width: 280px;
+}
+
+.column-header {
+  display: grid;
+  gap: 8px;
+}
+
+.column-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.column-actions button {
+  font-size: 13px;
+  padding: 7px 10px;
+}
+
+.danger-button {
+  background: #a33a2b;
+}
+
+.secondary-button {
+  background: #f5ebdc;
+  color: var(--text);
+}
+
+.settings-table th:first-child,
+.settings-table th:nth-child(2),
+.settings-table th:nth-child(3) {
+  min-width: 90px;
+}
+
+.planets-table {
+  width: 100%;
+}
+
+.planets-table th {
+  min-width: 140px;
+}
+
+.planets-table th:first-child {
+  min-width: 260px;
+}
+
+.inline-check {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.inline-check input {
+  width: auto;
+}
+
+.modal-backdrop {
+  align-items: center;
+  background: rgba(47, 38, 31, 0.45);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 20px;
+  position: fixed;
+  z-index: 20;
+}
+
+.modal {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: 0 24px 70px rgba(47, 38, 31, 0.25);
+  max-height: calc(100vh - 40px);
+  max-width: 820px;
+  overflow: auto;
+  padding: 20px;
+  width: 100%;
+}
+
+.modal-add-row {
+  margin-bottom: 16px;
+}
+
+.settings-table textarea {
+  min-width: 260px;
+  min-height: 120px;
+}
+
+@media (max-width: 720px) {
+  .hero-row,
+  .settings-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}

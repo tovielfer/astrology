@@ -1,0 +1,136 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Sign {
+  aries
+  taurus
+  gemini
+  cancer
+  leo
+  virgo
+  libra
+  scorpio
+  sagittarius
+  capricorn
+  aquarius
+  pisces
+}
+
+enum InterpretationType {
+  house
+  sign
+  mixed
+}
+
+model Person {
+  id        String           @id @default(cuid())
+  name      String
+  birthDate String?
+  notes     String?
+  createdAt DateTime         @default(now())
+  positions PlanetPosition[]
+  reports   Report[]
+}
+
+model Planet {
+  id                    String                 @id @default(cuid())
+  code                  String                 @unique
+  label                 String
+  sortOrder             Int
+  isActive              Boolean                @default(true)
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  positions             PlanetPosition[]
+  interpretations       Interpretation[]
+  interpretationColumns InterpretationColumn[]
+  interpretationRows    InterpretationRow[]
+
+  @@index([isActive, sortOrder])
+}
+
+model PlanetPosition {
+  id        String   @id @default(cuid())
+  personId  String
+  planetId  String
+  house     Int
+  sign      Sign
+  createdAt DateTime @default(now())
+  person    Person   @relation(fields: [personId], references: [id], onDelete: Cascade)
+  planet    Planet   @relation(fields: [planetId], references: [id], onDelete: Cascade)
+
+  @@unique([personId, planetId])
+  @@index([planetId, house])
+  @@index([planetId, sign])
+}
+
+model Interpretation {
+  id        String             @id @default(cuid())
+  planetId  String
+  type      InterpretationType
+  house     Int?
+  sign      Sign?
+  title     String
+  content   String
+  category  String?
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+  planet    Planet             @relation(fields: [planetId], references: [id], onDelete: Cascade)
+
+  @@index([planetId, type, house])
+  @@index([planetId, type, sign])
+}
+
+model InterpretationColumn {
+  id        String               @id @default(cuid())
+  planetId  String
+  title     String
+  sortOrder Int
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+  cells     InterpretationCell[]
+  planet    Planet               @relation(fields: [planetId], references: [id], onDelete: Cascade)
+
+  @@unique([planetId, sortOrder])
+  @@index([planetId])
+}
+
+model InterpretationRow {
+  id        String               @id @default(cuid())
+  planetId  String
+  house     Int
+  sign      Sign
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+  cells     InterpretationCell[]
+  planet    Planet               @relation(fields: [planetId], references: [id], onDelete: Cascade)
+
+  @@unique([planetId, house])
+  @@unique([planetId, sign])
+  @@index([planetId])
+}
+
+model InterpretationCell {
+  id        String               @id @default(cuid())
+  rowId     String
+  columnId  String
+  content   String               @default("")
+  updatedAt DateTime             @updatedAt
+  row       InterpretationRow    @relation(fields: [rowId], references: [id], onDelete: Cascade)
+  column    InterpretationColumn @relation(fields: [columnId], references: [id], onDelete: Cascade)
+
+  @@unique([rowId, columnId])
+  @@index([columnId])
+}
+
+model Report {
+  id          String   @id @default(cuid())
+  personId    String
+  generatedAt DateTime @default(now())
+  pdfUrl      String
+  person      Person   @relation(fields: [personId], references: [id], onDelete: Cascade)
+}

@@ -1,0 +1,10 @@
+.next
+node_modules
+public/reports/*.pdf
+/*.pdf
+/*.csv
+.env
+.env*.local
+dist
+coverage
+*.tsbuildinfo
