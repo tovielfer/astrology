@@ -2,6 +2,11 @@ import { SIGNS, type Sign } from "@/lib/astrology";
 import { getActivePlanets } from "@/lib/planets";
 import { prisma } from "@/lib/prisma";
 
+type TransactionClient = Omit<
+  typeof prisma,
+  "$connect" | "$disconnect" | "$on" | "$use" | "$extends"
+>;
+
 export type SaveInterpretationSettingsInput = {
   planetId: string;
   columns: Array<{
@@ -96,7 +101,7 @@ export async function getPlanetReportSettings(planetId: string, house: number, s
 export async function savePlanetInterpretationSettings(input: SaveInterpretationSettingsInput) {
   await ensurePlanetInterpretationSettings(input.planetId);
 
-  return prisma.$transaction(async (tx: typeof prisma) => {
+  return prisma.$transaction(async (tx: TransactionClient) => {
     const existingColumns = await tx.interpretationColumn.findMany({
       where: { planetId: input.planetId },
       select: { id: true },
