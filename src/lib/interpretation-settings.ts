@@ -6,6 +6,7 @@ type TransactionClient = Omit<
   typeof prisma,
   "$connect" | "$disconnect" | "$on" | "$use" | "$extends"
 >;
+type PlanetReference = { id: string };
 
 export type SaveInterpretationSettingsInput = {
   planetId: string;
@@ -24,9 +25,13 @@ export type SaveInterpretationSettingsInput = {
 export async function getAllInterpretationSettings() {
   const planets = await getActivePlanets();
 
-  await Promise.all(planets.map((planet) => ensurePlanetInterpretationSettings(planet.id)));
+  await Promise.all(
+    planets.map((planet: PlanetReference) => ensurePlanetInterpretationSettings(planet.id)),
+  );
 
-  const settings = await Promise.all(planets.map((planet) => getPlanetInterpretationSettings(planet.id)));
+  const settings = await Promise.all(
+    planets.map((planet: PlanetReference) => getPlanetInterpretationSettings(planet.id)),
+  );
 
   return settings;
 }
