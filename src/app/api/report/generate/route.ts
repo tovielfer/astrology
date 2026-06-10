@@ -13,7 +13,7 @@ export async function POST(request: Request) {
     const report = await generateReport(personId);
     const encodedFileName = encodeURIComponent(report.fileName);
 
-    return new Response(new Blob([report.pdf], { type: "application/pdf" }), {
+    return new Response(new Blob([new Uint8Array(report.pdf)], { type: "application/pdf" }), {
       status: 201,
       headers: {
         "Content-Disposition": `attachment; filename="report.pdf"; filename*=UTF-8''${encodedFileName}`,

@@ -1,7 +1,6 @@
 import { getPlanetInterpretation } from "@/lib/interpretations";
-import { renderPdf } from "@/lib/pdf";
 import { prisma } from "@/lib/prisma";
-import { buildReportHtml } from "@/lib/report-template";
+import { renderReportPdf } from "@/lib/report-pdf";
 import type { Sign } from "@/lib/astrology";
 
 type ReportPerson = {
@@ -41,8 +40,7 @@ export async function generateReport(personId: string) {
     })),
   );
 
-  const html = buildReportHtml(reportPerson, sections);
-  const pdf = await renderPdf(html);
+  const pdf = await renderReportPdf(reportPerson, sections);
 
   return {
     fileName: buildReportFileName(reportPerson.name),
