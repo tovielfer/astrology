@@ -82,6 +82,28 @@ button, input, select, textarea { font: inherit; }
 
 .link-button:hover { background: var(--accent-hover); }
 
+.link-button-back {
+  align-items: center;
+  background: transparent;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  color: var(--muted);
+  display: inline-flex;
+  font-size: 14px;
+  font-weight: 600;
+  gap: 6px;
+  padding: 8px 14px;
+  text-decoration: none;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+  white-space: nowrap;
+}
+
+.link-button-back:hover {
+  background: var(--bg);
+  border-color: var(--muted);
+  color: var(--text);
+}
+
 /* ─── Cards ─── */
 .card {
   background: var(--card);
@@ -477,8 +499,28 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .settings-toolbar h2 { margin: 0; }
 
-.toolbar-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.toolbar-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
 .toolbar-actions input { min-width: 220px; width: auto; }
+
+.unsaved-badge {
+  align-items: center;
+  background: #fff8e1;
+  border: 1.5px solid #f5b800;
+  border-radius: 20px;
+  color: #8a6200;
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 600;
+  gap: 4px;
+  padding: 4px 12px;
+  white-space: nowrap;
+}
+
+.primary-button {
+  background: var(--accent) !important;
+  color: white !important;
+  font-weight: 700 !important;
+}
 
 .settings-table-wrap { overflow-x: auto; }
 

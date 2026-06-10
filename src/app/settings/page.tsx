@@ -69,6 +69,8 @@ export default function SettingsPage() {
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [hasUnsavedPlanets, setHasUnsavedPlanets] = useState(false);
 
   const activeSettings = useMemo(
     () => settings.find((item) => item.planetId === activePlanetId),
@@ -133,6 +135,7 @@ export default function SettingsPage() {
       const saved = (await response.json()) as PlanetSettings;
 
       setSettings((current) => current.map((item) => (item.planetId === saved.planetId ? saved : item)));
+      setHasUnsavedChanges(false);
       setStatus("ההגדרות נשמרו בהצלחה.");
     });
   }
@@ -194,14 +197,17 @@ export default function SettingsPage() {
 
   function updatePlanetLabel(planetId: string, label: string) {
     setPlanets((current) => current.map((planet) => (planet.id === planetId ? { ...planet, label } : planet)));
+    setHasUnsavedPlanets(true);
   }
 
   function updatePlanetActive(planetId: string, isActive: boolean) {
     setPlanets((current) => current.map((planet) => (planet.id === planetId ? { ...planet, isActive } : planet)));
+    setHasUnsavedPlanets(true);
   }
 
   function updatePlanetHouseOnly(planetId: string, houseOnly: boolean) {
     setPlanets((current) => current.map((planet) => (planet.id === planetId ? { ...planet, houseOnly } : planet)));
+    setHasUnsavedPlanets(true);
   }
 
   function movePlanet(planetId: string, direction: -1 | 1) {
@@ -225,6 +231,7 @@ export default function SettingsPage() {
 
       return orderedPlanets.map((item, index) => ({ ...item, sortOrder: index }));
     });
+    setHasUnsavedPlanets(true);
   }
 
   async function handleAddPlanet() {
@@ -267,6 +274,7 @@ export default function SettingsPage() {
       const savedPlanets = (await response.json()) as PlanetRecord[];
 
       setPlanets(savedPlanets);
+      setHasUnsavedPlanets(false);
       await loadSettings();
       setStatus("רשימת הכוכבים נשמרה.");
     });
@@ -437,6 +445,7 @@ export default function SettingsPage() {
     setSettings((current) =>
       current.map((item) => (item.planetId === activePlanetId ? update(item) : item)),
     );
+    setHasUnsavedChanges(true);
   }
 
   async function runAction(action: () => Promise<void>) {
@@ -464,8 +473,8 @@ export default function SettingsPage() {
           <button onClick={() => setIsPlanetModalOpen(true)} type="button">
             ניהול כוכבים
           </button>
-          <Link className="link-button" href="/">
-            חזרה למחולל
+          <Link className="link-button-back" href="/">
+          חזרה למחולל ← 
           </Link>
         </div>
       </header>
@@ -493,7 +502,15 @@ export default function SettingsPage() {
               <button disabled={isLoading || !newPlanetLabel.trim()} onClick={handleAddPlanet} type="button">
                 הוספת כוכב
               </button>
-              <button disabled={isLoading || planets.length === 0} onClick={handleSavePlanets} type="button">
+              {hasUnsavedPlanets ? (
+                <span className="unsaved-badge">● שינויים לא שמורים</span>
+              ) : null}
+              <button
+                className={hasUnsavedPlanets ? "primary-button" : ""}
+                disabled={isLoading || planets.length === 0}
+                onClick={handleSavePlanets}
+                type="button"
+              >
                 שמירת כוכבים
               </button>
             </div>
@@ -571,7 +588,7 @@ export default function SettingsPage() {
             <button
               className={`tab-button ${planet.id === activePlanetId ? "active" : ""}`}
               key={planet.id}
-              onClick={() => setActivePlanetId(planet.id)}
+              onClick={() => { setActivePlanetId(planet.id); setHasUnsavedChanges(false); }}
               type="button"
             >
               {planet.label}
@@ -611,7 +628,15 @@ export default function SettingsPage() {
                     type="file"
                   />
                 </label>
-                <button disabled={isLoading} onClick={handleSave} type="button">
+                {hasUnsavedChanges ? (
+                  <span className="unsaved-badge">● שינויים לא שמורים</span>
+                ) : null}
+                <button
+                  className={hasUnsavedChanges ? "primary-button" : ""}
+                  disabled={isLoading}
+                  onClick={handleSave}
+                  type="button"
+                >
                   שמירת שינויים
                 </button>
               </div>
