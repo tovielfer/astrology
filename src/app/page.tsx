@@ -348,6 +348,7 @@ export default function Home() {
     }
     const pdf = await reportRes.blob();
     openBlobInNewTab(pdf);
+    downloadBlob(pdf, getDownloadFileName(reportRes.headers.get("Content-Disposition")));
     setStatus(`הדוח עבור "${name}" נוצר בהצלחה.`);
   }
 
@@ -547,6 +548,17 @@ export default function Home() {
 }
 
 // ─── Utils ────────────────────────────────────────────────────────────────────
+
+function downloadBlob(blob: Blob, fileName: string) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
 
 function openBlobInNewTab(blob: Blob) {
   const url = URL.createObjectURL(blob);
