@@ -17,7 +17,7 @@ export async function POST(request: Request, context: RouteContext) {
     return NextResponse.json({ message: "Person not found" }, { status: 404 });
   }
 
-  await prisma.$transaction(
+  await Promise.all(
     positions.map((position) =>
       prisma.planetPosition.upsert({
         where: {
@@ -31,8 +31,8 @@ export async function POST(request: Request, context: RouteContext) {
           sign: position.sign,
         },
         create: {
-          personId,
-          planetId: position.planetId,
+          person: { connect: { id: personId } },
+          planet: { connect: { id: position.planetId } },
           house: position.house,
           sign: position.sign,
         },

@@ -68,7 +68,7 @@ export async function getPlanetInterpretationSettings(planetId: string) {
   };
 }
 
-export async function getPlanetReportSettings(planetId: string, house: number, sign: Sign) {
+export async function getPlanetReportSettings(planetId: string, house: number | null, sign: Sign | null) {
   await ensurePlanetInterpretationSettings(planetId);
 
   const [columns, houseRow, signRow] = await Promise.all([
@@ -76,28 +76,18 @@ export async function getPlanetReportSettings(planetId: string, house: number, s
       where: { planetId },
       orderBy: { sortOrder: "asc" },
     }),
-    prisma.interpretationRow.findUnique({
-      where: {
-        planetId_house: {
-          planetId,
-          house,
-        },
-      },
-      include: {
-        cells: true,
-      },
-    }),
-    prisma.interpretationRow.findUnique({
-      where: {
-        planetId_sign: {
-          planetId,
-          sign,
-        },
-      },
-      include: {
-        cells: true,
-      },
-    }),
+    house !== null
+      ? prisma.interpretationRow.findUnique({
+          where: { planetId_house: { planetId, house } },
+          include: { cells: true },
+        })
+      : Promise.resolve(null),
+    sign !== null
+      ? prisma.interpretationRow.findUnique({
+          where: { planetId_sign: { planetId, sign } },
+          include: { cells: true },
+        })
+      : Promise.resolve(null),
   ]);
 
   return { columns, houseRow, signRow };
@@ -139,59 +129,63 @@ export async function savePlanetInterpretationSettings(input: SaveInterpretation
       ),
     );
 
-    for (const column of input.columns) {
-      if (isNewClientColumnId(column.clientId)) {
-        const created = await tx.interpretationColumn.create({
+    await Promise.all(
+      input.columns.map(async (column) => {
+        if (isNewClientColumnId(column.clientId)) {
+          const created = await tx.interpretationColumn.create({
+            data: {
+              planetId: input.planetId,
+              title: column.title,
+              sortOrder: column.sortOrder,
+            },
+          });
+          columnIdByClientId.set(column.clientId, created.id);
+          return;
+        }
+
+        const updated = await tx.interpretationColumn.update({
+          where: { id: column.clientId },
           data: {
-            planetId: input.planetId,
             title: column.title,
             sortOrder: column.sortOrder,
           },
         });
-        columnIdByClientId.set(column.clientId, created.id);
-        continue;
-      }
-
-      const updated = await tx.interpretationColumn.update({
-        where: { id: column.clientId },
-        data: {
-          title: column.title,
-          sortOrder: column.sortOrder,
-        },
-      });
-      columnIdByClientId.set(column.clientId, updated.id);
-    }
+        columnIdByClientId.set(column.clientId, updated.id);
+      }),
+    );
 
     const rows = await tx.interpretationRow.findMany({
       where: { planetId: input.planetId },
     });
     const rowIdByHouse = new Map(rows.map((row: { house: number; id: string }) => [row.house, row.id]));
 
-    for (const cell of input.cells) {
-      const rowId = rowIdByHouse.get(cell.house);
-      const columnId = columnIdByClientId.get(cell.columnClientId);
+    await Promise.all(
+      input.cells.map((cell) => {
+        const rowId = rowIdByHouse.get(cell.house);
+        const columnId = columnIdByClientId.get(cell.columnClientId);
 
-      if (!rowId || !columnId) {
-        throw new Error("Invalid interpretation cell reference");
-      }
+        if (!rowId || !columnId) {
+          throw new Error("Invalid interpretation cell reference");
+        }
 
-      await tx.interpretationCell.upsert({
-        where: {
-          rowId_columnId: {
+        return tx.interpretationCell.upsert({
+          where: {
+            rowId_columnId: {
+              rowId,
+              columnId,
+            },
+          },
+          update: {
+            content: cell.content,
+          },
+          create: {
             rowId,
             columnId,
+            content: cell.content,
           },
-        },
-        update: {
-          content: cell.content,
-        },
-        create: {
-          rowId,
-          columnId,
-          content: cell.content,
-        },
-      });
-    }
+        });
+      }),
+    );
 
     const [planet, columns, rowsWithCells] = await Promise.all([
       tx.planet.findUnique({
@@ -220,6 +214,9 @@ export async function savePlanetInterpretationSettings(input: SaveInterpretation
       columns,
       rows: rowsWithCells,
     };
+  }, {
+    maxWait: 10000,
+    timeout: 30000,
   });
 }
 

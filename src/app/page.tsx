@@ -1,14 +1,23 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import {
+  FormEvent,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { SIGNS, type Sign } from "@/lib/astrology";
+
+// ─── Types ───────────────────────────────────────────────────────────────────
 
 type PlanetRecord = {
   id: string;
   label: string;
   sortOrder: number;
   isActive: boolean;
+  houseOnly: boolean;
 };
 
 type Person = {
@@ -23,260 +32,503 @@ type Position = {
   id: string;
   planetId: string;
   planet: PlanetRecord;
-  house: number;
-  sign: Sign;
+  house: number | null;
+  sign: Sign | null;
 };
 
 type PositionInput = {
   planetId: string;
-  house: number;
-  sign: Sign;
+  house: number | null;
+  sign: Sign | null;
 };
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function signLabel(sign: Sign | null): string {
+  return SIGNS.find((s) => s.value === sign)?.label ?? "";
+}
+
+function buildEmptyPositions(planets: PlanetRecord[]): PositionInput[] {
+  return planets.map((p) => ({ planetId: p.id, house: null, sign: null }));
+}
+
+function loadPersonPositions(planets: PlanetRecord[], person: Person): PositionInput[] {
+  return planets.map((planet) => {
+    const existing = person.positions.find((pos) => pos.planetId === planet.id);
+    return { planetId: planet.id, house: existing?.house ?? null, sign: existing?.sign ?? null };
+  });
+}
+
+// ─── SignCombobox ─────────────────────────────────────────────────────────────
+// Custom searchable dropdown for signs: type to filter, click to select.
+
+function SignCombobox({
+  value,
+  onChange,
+}: {
+  value: Sign | null;
+  onChange: (sign: Sign | null) => void;
+}) {
+  const [text, setText] = useState(signLabel(value));
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  // Sync display text when value is updated externally
+  useEffect(() => {
+    setText(signLabel(value));
+  }, [value]);
+
+  const filtered = useMemo(() => {
+    const q = text.trim();
+    if (!q) return SIGNS;
+    return SIGNS.filter((s) => s.label.includes(q));
+  }, [text]);
+
+  // Close on outside click; revert display if text doesn't match
+  useEffect(() => {
+    function onMouseDown(e: MouseEvent) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
+        setOpen(false);
+        setText(signLabel(value)); // revert to last valid value
+      }
+    }
+    document.addEventListener("mousedown", onMouseDown);
+    return () => document.removeEventListener("mousedown", onMouseDown);
+  }, [value]);
+
+  function handleInput(raw: string) {
+    setText(raw);
+    setOpen(true);
+    const exact = SIGNS.find((s) => s.label === raw.trim());
+    onChange(exact?.value ?? null);
+  }
+
+  function handleSelect(sign: (typeof SIGNS)[number]) {
+    setText(sign.label);
+    onChange(sign.value);
+    setOpen(false);
+  }
+
+  return (
+    <div ref={wrapRef} className="cbx-wrap">
+      <input
+        className="pos-input"
+        value={text}
+        placeholder="—"
+        autoComplete="off"
+        onChange={(e) => handleInput(e.target.value)}
+        onFocus={() => setOpen(true)}
+      />
+      {open && filtered.length > 0 && (
+        <div className="cbx-drop">
+          {filtered.map((s) => (
+            <div
+              key={s.value}
+              className={`cbx-opt ${value === s.value ? "cbx-opt-active" : ""}`}
+              // mouseDown before blur so value is registered before the dropdown hides
+              onMouseDown={(e) => {
+                e.preventDefault();
+                handleSelect(s);
+              }}
+            >
+              {s.label}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── PositionsTable ───────────────────────────────────────────────────────────
+
+function PositionsTable({
+  positions,
+  planetById,
+  onHouseChange,
+  onSignChange,
+}: {
+  positions: PositionInput[];
+  planetById: Map<string, PlanetRecord>;
+  onHouseChange: (index: number, house: number | null) => void;
+  onSignChange: (index: number, sign: Sign | null) => void;
+}) {
+  return (
+    <div className="pos-table">
+      <div className="pos-header">
+        <span>כוכב</span>
+        <span>בית</span>
+        <span>מזל</span>
+        <span />
+      </div>
+      {positions.map((pos, index) => {
+        const planet = planetById.get(pos.planetId);
+        const isHouseOnly = planet?.houseOnly ?? false;
+        const complete = isHouseOnly ? pos.house !== null : pos.house !== null && pos.sign !== null;
+        const partial = !complete && (pos.house !== null || pos.sign !== null);
+        return (
+          <div className="pos-row" key={pos.planetId}>
+            <span className="pos-planet">{planet?.label ?? "כוכב"}</span>
+
+            {/* House */}
+            <input
+              className="pos-input pos-input-narrow"
+              type="number"
+              min={1}
+              max={12}
+              placeholder="—"
+              value={pos.house ?? ""}
+              onChange={(e) => {
+                const v = e.target.value;
+                onHouseChange(
+                  index,
+                  v === "" ? null : Math.min(12, Math.max(1, Number(v))),
+                );
+              }}
+            />
+
+            {/* Sign — disabled for house-only planets */}
+            {isHouseOnly ? (
+              <span className="pos-house-only-sign" title="כוכב זה מוגדר כבית בלבד">—</span>
+            ) : (
+              <SignCombobox
+                value={pos.sign}
+                onChange={(sign) => onSignChange(index, sign)}
+              />
+            )}
+
+            {/* Completion dot */}
+            <span
+              className={`pos-dot ${complete ? "pos-dot-ok" : partial ? "pos-dot-partial" : ""}`}
+              title={complete ? "מלא" : partial ? "חלקי" : ""}
+            />
+          </div>
+        );
+      })}
+      <p className="pos-hint">
+        שורות ריקות לחלוטין לא ייכללו בדוח.
+      </p>
+    </div>
+  );
+}
+
+// ─── Home ─────────────────────────────────────────────────────────────────────
 
 export default function Home() {
   const [planets, setPlanets] = useState<PlanetRecord[]>([]);
   const [people, setPeople] = useState<Person[]>([]);
-  const [selectedPersonId, setSelectedPersonId] = useState("");
-  const [positions, setPositions] = useState<PositionInput[]>([]);
+
   const [personName, setPersonName] = useState("");
-  const [birthDate, setBirthDate] = useState("");
-  const [notes, setNotes] = useState("");
+  const [positions, setPositions] = useState<PositionInput[]>([]);
+
+  const [modalPerson, setModalPerson] = useState<Person | null>(null);
+  const [modalPositions, setModalPositions] = useState<PositionInput[]>([]);
+
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const selectedPerson = useMemo(
-    () => people.find((person) => person.id === selectedPersonId),
-    [people, selectedPersonId],
-  );
-  const activePlanets = useMemo(() => planets.filter((planet) => planet.isActive), [planets]);
-  const planetById = useMemo(() => new Map(planets.map((planet) => [planet.id, planet])), [planets]);
+  const activePlanets = useMemo(() => planets.filter((p) => p.isActive), [planets]);
+  const planetById = useMemo(() => new Map(planets.map((p) => [p.id, p])), [planets]);
 
   useEffect(() => {
     void loadInitialData();
   }, []);
 
-  useEffect(() => {
-    if (!selectedPerson) {
-      return;
-    }
-
-    setPositions(buildPositionInputs(activePlanets, selectedPerson));
-  }, [activePlanets, selectedPerson]);
-
   async function loadInitialData() {
-    const [planetsResponse, peopleResponse] = await Promise.all([fetch("/api/planets"), fetch("/api/person")]);
+    const [pr, per] = await Promise.all([fetch("/api/planets"), fetch("/api/person")]);
     const [planetsData, peopleData] = (await Promise.all([
-      planetsResponse.json(),
-      peopleResponse.json(),
+      pr.json(),
+      per.json(),
     ])) as [PlanetRecord[], Person[]];
-
     setPlanets(planetsData);
     setPeople(peopleData);
-
-    const firstPerson = peopleData[0];
-    if (firstPerson) {
-      setSelectedPersonId(firstPerson.id);
-    } else {
-      setPositions(buildPositionInputs(planetsData.filter((planet) => planet.isActive)));
-    }
+    setPositions(buildEmptyPositions(planetsData.filter((p) => p.isActive)));
   }
 
   async function refreshPeople() {
-    const response = await fetch("/api/person");
-    const data = (await response.json()) as Person[];
-    setPeople(data);
-
-    if (!selectedPersonId && data[0]) {
-      setSelectedPersonId(data[0].id);
-    }
+    const res = await fetch("/api/person");
+    setPeople((await res.json()) as Person[]);
   }
 
-  async function handleCreatePerson(event: FormEvent<HTMLFormElement>) {
+  // ── Position updaters ─────────────────────────────────────────────────────
+
+  function setHouse(index: number, house: number | null) {
+    setPositions((cur) => cur.map((p, i) => (i === index ? { ...p, house } : p)));
+  }
+
+  function setSign(index: number, sign: Sign | null) {
+    setPositions((cur) => cur.map((p, i) => (i === index ? { ...p, sign } : p)));
+  }
+
+  function setModalHouse(index: number, house: number | null) {
+    setModalPositions((cur) => cur.map((p, i) => (i === index ? { ...p, house } : p)));
+  }
+
+  function setModalSign(index: number, sign: Sign | null) {
+    setModalPositions((cur) => cur.map((p, i) => (i === index ? { ...p, sign } : p)));
+  }
+
+  // ── New report ────────────────────────────────────────────────────────────
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const filled = positions.filter((p) => p.house !== null || p.sign !== null);
+    if (filled.length === 0) {
+      setError("יש למלא לפחות מיקום כוכב אחד לפני יצירת הדוח.");
+      return;
+    }
     await runAction(async () => {
-      const response = await fetch("/api/person", {
+      const personRes = await fetch("/api/person", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: personName, birthDate, notes }),
+        body: JSON.stringify({ name: personName, birthDate: null, notes: null }),
       });
-      const person = (await response.json()) as Person;
-      setSelectedPersonId(person.id);
+      if (!personRes.ok) throw new Error("יצירת האדם נכשלה.");
+      const person = (await personRes.json()) as Person;
+      await saveAndGenerate(person.id, filled, personName);
+      await refreshPeople();
+      const name = personName;
       setPersonName("");
-      setBirthDate("");
-      setNotes("");
-      await refreshPeople();
-      setStatus("האדם נוצר בהצלחה.");
+      setPositions(buildEmptyPositions(activePlanets));
+      setStatus(`הדוח עבור "${name}" נוצר בהצלחה.`);
     });
   }
 
-  async function handleSavePositions() {
-    if (!selectedPersonId) {
-      setError("בחרי אדם לפני שמירת מיקומי כוכבים.");
+  // ── Edit modal ────────────────────────────────────────────────────────────
+
+  function openModal(person: Person) {
+    setModalPerson(person);
+    setModalPositions(loadPersonPositions(activePlanets, person));
+    setError("");
+    setStatus("");
+  }
+
+  function closeModal() {
+    setModalPerson(null);
+    setModalPositions([]);
+  }
+
+  async function handleModalGenerate() {
+    if (!modalPerson) return;
+    const filled = modalPositions.filter((p) => {
+      const planet = planetById.get(p.planetId);
+      if (planet?.houseOnly) return p.house !== null;
+      return p.house !== null || p.sign !== null;
+    });
+    if (filled.length === 0) {
+      setError("יש למלא לפחות מיקום אחד.");
       return;
     }
-
     await runAction(async () => {
-      await fetch(`/api/person/${selectedPersonId}/positions`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ positions }),
-      });
+      await saveAndGenerate(modalPerson.id, filled, modalPerson.name);
       await refreshPeople();
-      setStatus("מיקומי הכוכבים נשמרו.");
+      closeModal();
     });
   }
 
-  async function handleGenerateReport() {
-    if (!selectedPersonId) {
-      setError("בחרי אדם לפני יצירת דוח.");
+  // ── Shared ────────────────────────────────────────────────────────────────
+
+  async function saveAndGenerate(personId: string, filled: PositionInput[], name: string) {
+    const posRes = await fetch(`/api/person/${personId}/positions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ positions: filled }),
+    });
+    if (!posRes.ok) throw new Error("שמירת המיקומים נכשלה.");
+
+    const reportRes = await fetch("/api/report/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ personId }),
+    });
+    if (!reportRes.ok) {
+      const data = (await reportRes.json()) as { message?: string };
+      throw new Error(data.message ?? "יצירת הדוח נכשלה.");
+    }
+    const pdf = await reportRes.blob();
+    downloadBlob(pdf, getDownloadFileName(reportRes.headers.get("Content-Disposition")));
+    setStatus(`הדוח עבור "${name}" נוצר בהצלחה.`);
+  }
+
+  async function handleDelete(personId: string, name: string) {
+    if (!confirm(`למחוק את הדוח של "${name}"? פעולה זו אינה ניתנת לביטול.`)) return;
+    await runAction(async () => {
+      const res = await fetch(`/api/person/${personId}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("מחיקת הדוח נכשלה.");
+      await refreshPeople();
+      setStatus(`הדוח של "${name}" נמחק.`);
+    });
+  }
+
+  async function handleDownload(personId: string, name: string) {
+    const person = people.find((p) => p.id === personId);
+    if (!person) return;
+    const filled = loadPersonPositions(activePlanets, person).filter((p) => {
+      const planet = planetById.get(p.planetId);
+      if (planet?.houseOnly) return p.house !== null;
+      return p.house !== null && p.sign !== null;
+    });
+    if (filled.length === 0) {
+      setError("אין מיקומים מלאים לייצוא דוח.");
       return;
     }
-
-    await runAction(async () => {
-      const response = await fetch("/api/report/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ personId: selectedPersonId }),
-      });
-
-      if (!response.ok) {
-        const data = (await response.json()) as { message?: string };
-        throw new Error(data.message ?? "יצירת הדוח נכשלה.");
-      }
-
-      const pdf = await response.blob();
-      downloadBlob(pdf, getDownloadFileName(response.headers.get("Content-Disposition")));
-      setStatus("הדוח נוצר וירד למחשב.");
-    });
+    await runAction(() => saveAndGenerate(personId, filled, name));
   }
 
   async function runAction(action: () => Promise<void>) {
     setIsLoading(true);
     setError("");
     setStatus("");
-
     try {
       await action();
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "אירעה שגיאה לא צפויה.");
+      setError(caught instanceof Error ? caught.message : "אירעה שגיאה.");
     } finally {
       setIsLoading(false);
     }
   }
 
-  function updatePosition(index: number, field: keyof PositionInput, value: string) {
-    setPositions((current) =>
-      current.map((position, positionIndex) =>
-        positionIndex === index
-          ? {
-              ...position,
-              [field]: field === "house" ? Number(value) : value,
-            }
-          : position,
-      ),
-    );
-  }
+  // ── Render ────────────────────────────────────────────────────────────────
 
   return (
     <main className="page">
       <header className="hero">
-        <h1>מחולל דוחות מפת לידה</h1>
-        <p>הזנת נתונים מוכנים, שליפת פרשנות מטבלאות ההגדרות, ויצירת PDF בעברית.</p>
-        <p style={{ marginTop: 14 }}>
+        <div className="hero-row">
+          <div>
+            <h1>מחולל דוחות מפת לידה</h1>
+            <p>מזינים מיקומי כוכבים ומקבלים דוח PDF בעברית</p>
+          </div>
           <Link className="link-button" href="/settings">
-            הגדרות פרשנויות
+            ⚙ הגדרות
           </Link>
-        </p>
+        </div>
       </header>
 
-      <div className="grid">
+      {status && <div className="msg success">{status}</div>}
+      {error && <div className="msg error">{error}</div>}
+
+      <div className="main-grid">
+
+        {/* ── New report ── */}
         <section className="card">
-          <h2>אנשים</h2>
-          <form className="form-stack" onSubmit={handleCreatePerson}>
-            <div className="field">
-              <label>שם</label>
-              <input value={personName} onChange={(event) => setPersonName(event.target.value)} required />
+          <h2 className="section-title">דוח חדש</h2>
+
+          <form onSubmit={handleSubmit}>
+            <div className="field" style={{ marginBottom: 20 }}>
+              <label>שם מלא *</label>
+              <input
+                placeholder="הכנס שם..."
+                value={personName}
+                onChange={(e) => setPersonName(e.target.value)}
+                required
+              />
             </div>
-            <div className="field">
-              <label>תאריך לידה</label>
-              <input value={birthDate} onChange={(event) => setBirthDate(event.target.value)} />
-            </div>
-            <div className="field">
-              <label>הערות</label>
-              <textarea value={notes} onChange={(event) => setNotes(event.target.value)} />
-            </div>
-            <button disabled={isLoading}>יצירת אדם חדש</button>
+
+            <p className="subsection-label">מיקומי כוכבים</p>
+            <PositionsTable
+              positions={positions}
+              planetById={planetById}
+              onHouseChange={setHouse}
+              onSignChange={setSign}
+            />
+
+            <button type="submit" className="btn-generate" disabled={isLoading}>
+              {isLoading ? "מייצר דוח..." : "צור דוח PDF ↓"}
+            </button>
           </form>
-
-          <div className="person-list" style={{ marginTop: 18 }}>
-            {people.map((person) => (
-              <button
-                className={`person-button ${person.id === selectedPersonId ? "active" : ""}`}
-                key={person.id}
-                onClick={() => setSelectedPersonId(person.id)}
-                type="button"
-              >
-                {person.name}
-              </button>
-            ))}
-          </div>
         </section>
 
-        <section className="card">
-          <h2>מיקומי כוכבים</h2>
-          <div className="table">
-            {positions.map((position, index) => (
-              <div className="position-row" key={position.planetId}>
-                <strong>{planetById.get(position.planetId)?.label ?? "כוכב"}</strong>
-                <select value={position.house} onChange={(event) => updatePosition(index, "house", event.target.value)}>
-                  {Array.from({ length: 12 }, (_, item) => item + 1).map((house) => (
-                    <option value={house} key={house}>
-                      בית {house}
-                    </option>
-                  ))}
-                </select>
-                <select value={position.sign} onChange={(event) => updatePosition(index, "sign", event.target.value)}>
-                  {SIGNS.map((sign) => (
-                    <option value={sign.value} key={sign.value}>
-                      {sign.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            ))}
-          </div>
-          <button disabled={isLoading || !selectedPersonId} onClick={handleSavePositions} style={{ marginTop: 16 }}>
-            שמירת מיקומים
-          </button>
-          <button disabled={isLoading || !selectedPersonId} onClick={handleGenerateReport} style={{ marginTop: 10 }}>
-            Generate Report
-          </button>
+        {/* ── Past reports ── */}
+        <section className="card past-card">
+          <h2 className="section-title">
+            דוחות קודמים
+            {people.length > 0 && <span className="count-badge">{people.length}</span>}
+          </h2>
+
+          {people.length === 0 ? (
+            <p className="empty-note">עדיין לא נוצרו דוחות.</p>
+          ) : (
+            <div className="past-list">
+              {people.map((person) => (
+                <div className="past-row" key={person.id}>
+                  <span className="past-name">{person.name}</span>
+                  <div className="past-actions">
+                    <button
+                      type="button"
+                      className="btn-sm btn-outline"
+                      disabled={isLoading}
+                      onClick={() => openModal(person)}
+                    >
+                      ✎ עריכה
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-sm btn-green"
+                      disabled={isLoading}
+                      onClick={() => handleDownload(person.id, person.name)}
+                    >
+                      ↓ הורד
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-sm btn-red"
+                      disabled={isLoading}
+                      onClick={() => handleDelete(person.id, person.name)}
+                    >
+                      🗑 מחק
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </section>
+
       </div>
 
-      {status ? <p className="status success">{status}</p> : null}
-      {error ? <p className="status error">{error}</p> : null}
+      {/* ── Edit modal ── */}
+      {modalPerson && (
+        <div
+          className="modal-backdrop"
+          onMouseDown={(e) => e.target === e.currentTarget && closeModal()}
+        >
+          <div className="modal">
+            <div className="modal-header">
+              <h3>עריכה: {modalPerson.name}</h3>
+              <button type="button" className="btn-close" onClick={closeModal}>
+                ✕
+              </button>
+            </div>
+
+            <p className="subsection-label" style={{ marginTop: 20 }}>מיקומי כוכבים</p>
+            <PositionsTable
+              positions={modalPositions}
+              planetById={planetById}
+              onHouseChange={setModalHouse}
+              onSignChange={setModalSign}
+            />
+
+            <button
+              type="button"
+              className="btn-generate"
+              disabled={isLoading}
+              onClick={handleModalGenerate}
+            >
+              {isLoading ? "מייצר דוח..." : "צור דוח PDF ↓"}
+            </button>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
 
-function buildPositionInputs(planets: PlanetRecord[], person?: Person): PositionInput[] {
-  return planets.map((planet) => {
-    const existing = person?.positions.find((position) => position.planetId === planet.id);
-
-    return {
-      planetId: planet.id,
-      house: existing?.house ?? 1,
-      sign: existing?.sign ?? "aries",
-    };
-  });
-}
+// ─── Utils ────────────────────────────────────────────────────────────────────
 
 function downloadBlob(blob: Blob, fileName: string) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
-
   link.href = url;
   link.download = fileName;
   document.body.appendChild(link);
@@ -286,14 +538,8 @@ function downloadBlob(blob: Blob, fileName: string) {
 }
 
 function getDownloadFileName(contentDisposition: string | null) {
-  if (!contentDisposition) {
-    return "report.pdf";
-  }
-
-  const utf8FileName = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i)?.[1];
-  if (utf8FileName) {
-    return decodeURIComponent(utf8FileName);
-  }
-
+  if (!contentDisposition) return "report.pdf";
+  const utf8 = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i)?.[1];
+  if (utf8) return decodeURIComponent(utf8);
   return contentDisposition.match(/filename="([^"]+)"/i)?.[1] ?? "report.pdf";
 }

@@ -9,6 +9,7 @@ type PlanetRecord = {
   label: string;
   sortOrder: number;
   isActive: boolean;
+  houseOnly: boolean;
 };
 
 type InterpretationColumn = {
@@ -199,6 +200,10 @@ export default function SettingsPage() {
     setPlanets((current) => current.map((planet) => (planet.id === planetId ? { ...planet, isActive } : planet)));
   }
 
+  function updatePlanetHouseOnly(planetId: string, houseOnly: boolean) {
+    setPlanets((current) => current.map((planet) => (planet.id === planetId ? { ...planet, houseOnly } : planet)));
+  }
+
   function movePlanet(planetId: string, direction: -1 | 1) {
     setPlanets((current) => {
       const currentIndex = current.findIndex((planet) => planet.id === planetId);
@@ -255,6 +260,7 @@ export default function SettingsPage() {
             label: planet.label,
             sortOrder: index,
             isActive: planet.isActive,
+            houseOnly: planet.houseOnly,
           })),
         }),
       });
@@ -498,6 +504,7 @@ export default function SettingsPage() {
                   <tr>
                     <th>שם</th>
                     <th>פעיל</th>
+                    <th>בית בלבד</th>
                     <th>סדר</th>
                   </tr>
                 </thead>
@@ -519,6 +526,16 @@ export default function SettingsPage() {
                             type="checkbox"
                           />
                           מוצג
+                        </label>
+                      </td>
+                      <td>
+                        <label className="inline-check">
+                          <input
+                            checked={planet.houseOnly}
+                            onChange={(event) => updatePlanetHouseOnly(planet.id, event.target.checked)}
+                            type="checkbox"
+                          />
+                          בית בלבד
                         </label>
                       </td>
                       <td>
@@ -606,7 +623,7 @@ export default function SettingsPage() {
                   <tr>
                     <th>כוכב</th>
                     <th>בית</th>
-                    <th>מזל</th>
+                    {activeSettings.planet.houseOnly ? null : <th>מזל</th>}
                     {activeSettings.columns.map((column, columnIndex) => (
                       <th key={column.id}>
                         <div className="column-header">
@@ -650,7 +667,7 @@ export default function SettingsPage() {
                     <tr key={row.id}>
                       <td>{activeSettings.planet.label}</td>
                       <td>בית {row.house}</td>
-                      <td>{getSignLabel(row.sign)}</td>
+                      {activeSettings.planet.houseOnly ? null : <td>{getSignLabel(row.sign)}</td>}
                       {activeSettings.columns.map((column) => (
                         <td key={column.id}>
                           <textarea

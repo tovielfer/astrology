@@ -15,8 +15,8 @@ export const personSchema = z.object({
 
 export const planetPositionSchema = z.object({
   planetId: planetIdSchema,
-  house: z.coerce.number().int().min(1).max(12),
-  sign: signSchema,
+  house: z.coerce.number().int().min(1).max(12).optional().nullable(),
+  sign: signSchema.optional().nullable(),
 });
 
 export const savePositionsSchema = z.object({
@@ -85,6 +85,7 @@ export const updatePlanetsSchema = z.object({
       label: z.string().trim().min(1, "Planet name is required"),
       sortOrder: z.coerce.number().int().min(0),
       isActive: z.boolean(),
+      houseOnly: z.boolean(),
     }),
   ),
 });

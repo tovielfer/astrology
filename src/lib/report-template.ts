@@ -12,8 +12,8 @@ type Planet = {
 
 type PlanetPosition = {
   planet: Planet;
-  house: number;
-  sign: Sign;
+  house: number | null;
+  sign: Sign | null;
 };
 
 type InterpretationColumn = {
@@ -31,8 +31,8 @@ type InterpretationCell = {
 type InterpretationRow = {
   id: string;
   planetId: string;
-  house: number;
-  sign: Sign;
+  house: number | null;
+  sign: Sign | null;
 };
 
 type ReportSection = {
@@ -90,31 +90,42 @@ export function buildReportHtml(person: Person, sections: ReportSection[]) {
 
       .planet {
         break-inside: avoid;
-        border: 1px solid #eadfce;
-        border-radius: 16px;
-        margin: 0 0 20px;
-        padding: 18px;
+        margin: 0 0 28px;
+        padding: 0;
+      }
+
+      .planet-header {
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
+        border-bottom: 2px solid #c9b89a;
+        padding-bottom: 6px;
+        margin-bottom: 12px;
       }
 
       .planet h2 {
         color: #4b3828;
         font-size: 22px;
-        margin-bottom: 6px;
+        margin: 0;
       }
 
       .position {
         color: #6b7280;
-        margin-bottom: 14px;
+        font-size: 14px;
+        margin: 0;
       }
 
       .interpretation {
-        margin-top: 14px;
+        margin-top: 12px;
       }
 
       .interpretation h3 {
         color: #6f4e37;
-        font-size: 16px;
-        margin-bottom: 4px;
+        font-size: 15px;
+        font-weight: bold;
+        margin-bottom: 6px;
+        padding-right: 8px;
+        border-right: 3px solid #c9b89a;
       }
 
       .interpretation h4 {
@@ -124,8 +135,8 @@ export function buildReportHtml(person: Person, sections: ReportSection[]) {
       }
 
       .interpretation p {
-        white-space: pre-wrap;
         margin: 0;
+        color: #374151;
       }
 
       .missing {
@@ -150,10 +161,10 @@ export function buildReportHtml(person: Person, sections: ReportSection[]) {
 function renderSection(section: ReportSection) {
   const { position, columns, houseRow, signRow } = section;
   const planetLabel = position.planet.label;
-  const signLabel = getSignLabel(position.sign);
+  const signLabelText = position.sign ? getSignLabel(position.sign) : null;
   const interpretationGroups = buildInterpretationGroups([
-    { title: `פירוש לפי בית ${position.house}`, row: houseRow },
-    { title: `פירוש לפי מזל ${signLabel}`, row: signRow },
+    ...(position.house !== null ? [{ title: `פירוש לפי בית ${position.house}`, row: houseRow }] : []),
+    ...(signLabelText ? [{ title: `פירוש לפי מזל ${signLabelText}`, row: signRow }] : []),
   ]).map((group) => ({
     title: group.title,
     items: columns
@@ -161,13 +172,16 @@ function renderSection(section: ReportSection) {
         column,
         content: group.row.cells.find((cell) => cell.columnId === column.id)?.content.trim() ?? "",
       }))
-      .filter((item) => item.content),
+      .filter((item) => item.content)
+      .map((item) => ({ ...item, content: item.content.replace(/\n+/g, " ") })),
   }));
   const hasInterpretations = interpretationGroups.some((group) => group.items.length > 0);
 
   return `<section class="planet">
-    <h2>${escapeHtml(planetLabel)}</h2>
-    <div class="position">בית ${position.house} / מזל ${escapeHtml(signLabel)}</div>
+    <div class="planet-header">
+      <h2>${escapeHtml(planetLabel)}</h2>
+      <div class="position">${position.house !== null ? `בית ${position.house}` : ""}${position.house !== null && signLabelText ? " / " : ""}${signLabelText ? `מזל ${escapeHtml(signLabelText)}` : ""}</div>
+    </div>
 
     ${
       hasInterpretations

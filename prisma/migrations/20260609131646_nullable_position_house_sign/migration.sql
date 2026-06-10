@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "PlanetPosition" ALTER COLUMN "house" DROP NOT NULL,
+ALTER COLUMN "sign" DROP NOT NULL;

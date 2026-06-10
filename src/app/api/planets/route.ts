@@ -29,6 +29,7 @@ export async function PUT(request: Request) {
           label: planet.label,
           sortOrder: planet.sortOrder,
           isActive: planet.isActive,
+          houseOnly: planet.houseOnly,
         },
       }),
     ),

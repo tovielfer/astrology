@@ -17,8 +17,8 @@ type InterpretationCell = {
 type InterpretationRow = {
   id: string;
   planetId: string;
-  house: number;
-  sign: Sign;
+  house: number | null;
+  sign: Sign | null;
 };
 
 export type PlanetInterpretation = {
@@ -29,8 +29,8 @@ export type PlanetInterpretation = {
 
 export async function getPlanetInterpretation(
   planetId: string,
-  house: number,
-  sign: Sign,
+  house: number | null,
+  sign: Sign | null,
 ): Promise<PlanetInterpretation> {
   const { columns, houseRow, signRow } = await getPlanetReportSettings(planetId, house, sign);
 

@@ -26,3 +26,13 @@ export async function GET(_request: Request, context: RouteContext) {
 
   return NextResponse.json(person);
 }
+
+export async function DELETE(_request: Request, context: RouteContext) {
+  const { id } = await context.params;
+  const existing = await prisma.person.findUnique({ where: { id } });
+  if (!existing) {
+    return NextResponse.json({ message: "Person not found" }, { status: 404 });
+  }
+  await prisma.person.delete({ where: { id } });
+  return new NextResponse(null, { status: 204 });
+}

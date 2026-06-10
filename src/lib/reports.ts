@@ -10,8 +10,8 @@ type ReportPerson = {
   notes: string | null;
   positions: {
     planetId: string;
-    house: number;
-    sign: Sign;
+    house: number | null;
+    sign: Sign | null;
     planet: {
       label: string;
     };
