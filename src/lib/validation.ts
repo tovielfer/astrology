@@ -86,6 +86,7 @@ export const updatePlanetsSchema = z.object({
       sortOrder: z.coerce.number().int().min(0),
       isActive: z.boolean(),
       houseOnly: z.boolean(),
+      signOnly: z.boolean(),
     }),
   ),
 });

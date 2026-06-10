@@ -18,6 +18,7 @@ type PlanetRecord = {
   sortOrder: number;
   isActive: boolean;
   houseOnly: boolean;
+  signOnly: boolean;
 };
 
 type Person = {
@@ -164,28 +165,37 @@ function PositionsTable({
       {positions.map((pos, index) => {
         const planet = planetById.get(pos.planetId);
         const isHouseOnly = planet?.houseOnly ?? false;
-        const complete = isHouseOnly ? pos.house !== null : pos.house !== null && pos.sign !== null;
+        const isSignOnly = planet?.signOnly ?? false;
+        const complete = isHouseOnly
+          ? pos.house !== null
+          : isSignOnly
+            ? pos.sign !== null
+            : pos.house !== null && pos.sign !== null;
         const partial = !complete && (pos.house !== null || pos.sign !== null);
         return (
           <div className="pos-row" key={pos.planetId}>
             <span className="pos-planet">{planet?.label ?? "כוכב"}</span>
 
-            {/* House */}
-            <input
-              className="pos-input pos-input-narrow"
-              type="number"
-              min={1}
-              max={12}
-              placeholder="—"
-              value={pos.house ?? ""}
-              onChange={(e) => {
-                const v = e.target.value;
-                onHouseChange(
-                  index,
-                  v === "" ? null : Math.min(12, Math.max(1, Number(v))),
-                );
-              }}
-            />
+            {/* House — disabled for sign-only planets */}
+            {isSignOnly ? (
+              <span className="pos-house-only-sign" title="כוכב זה מוגדר כמזל בלבד">—</span>
+            ) : (
+              <input
+                className="pos-input pos-input-narrow"
+                type="number"
+                min={1}
+                max={12}
+                placeholder="—"
+                value={pos.house ?? ""}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  onHouseChange(
+                    index,
+                    v === "" ? null : Math.min(12, Math.max(1, Number(v))),
+                  );
+                }}
+              />
+            )}
 
             {/* Sign — disabled for house-only planets */}
             {isHouseOnly ? (
@@ -322,6 +332,7 @@ export default function Home() {
     const filled = modalPositions.filter((p) => {
       const planet = planetById.get(p.planetId);
       if (planet?.houseOnly) return p.house !== null;
+      if (planet?.signOnly) return p.sign !== null;
       return p.house !== null || p.sign !== null;
     });
     if (filled.length === 0) {
@@ -376,6 +387,7 @@ export default function Home() {
     const filled = loadPersonPositions(activePlanets, person).filter((p) => {
       const planet = planetById.get(p.planetId);
       if (planet?.houseOnly) return p.house !== null;
+      if (planet?.signOnly) return p.sign !== null;
       return p.house !== null && p.sign !== null;
     });
     if (filled.length === 0) {

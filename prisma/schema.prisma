@@ -23,6 +23,7 @@ model Planet {
   sortOrder             Int
   isActive              Boolean                @default(true)
   houseOnly             Boolean                @default(false)
+  signOnly              Boolean                @default(false)
   createdAt             DateTime               @default(now())
   updatedAt             DateTime               @default(now()) @updatedAt
   interpretations       Interpretation[]

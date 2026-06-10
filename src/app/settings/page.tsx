@@ -10,6 +10,7 @@ type PlanetRecord = {
   sortOrder: number;
   isActive: boolean;
   houseOnly: boolean;
+  signOnly: boolean;
 };
 
 type InterpretationColumn = {
@@ -208,7 +209,20 @@ export default function SettingsPage() {
   }
 
   function updatePlanetHouseOnly(planetId: string, houseOnly: boolean) {
-    setPlanets((current) => current.map((planet) => (planet.id === planetId ? { ...planet, houseOnly } : planet)));
+    setPlanets((current) =>
+      current.map((planet) =>
+        planet.id === planetId ? { ...planet, houseOnly, signOnly: houseOnly ? false : planet.signOnly } : planet,
+      ),
+    );
+    setHasUnsavedPlanets(true);
+  }
+
+  function updatePlanetSignOnly(planetId: string, signOnly: boolean) {
+    setPlanets((current) =>
+      current.map((planet) =>
+        planet.id === planetId ? { ...planet, signOnly, houseOnly: signOnly ? false : planet.houseOnly } : planet,
+      ),
+    );
     setHasUnsavedPlanets(true);
   }
 
@@ -270,6 +284,7 @@ export default function SettingsPage() {
             sortOrder: index,
             isActive: planet.isActive,
             houseOnly: planet.houseOnly,
+            signOnly: planet.signOnly,
           })),
         }),
       });
@@ -524,6 +539,7 @@ export default function SettingsPage() {
                     <th>שם</th>
                     <th>פעיל</th>
                     <th>בית בלבד</th>
+                    <th>מזל בלבד</th>
                     <th>סדר</th>
                   </tr>
                 </thead>
@@ -555,6 +571,16 @@ export default function SettingsPage() {
                             type="checkbox"
                           />
                           בית בלבד
+                        </label>
+                      </td>
+                      <td>
+                        <label className="inline-check">
+                          <input
+                            checked={planet.signOnly}
+                            onChange={(event) => updatePlanetSignOnly(planet.id, event.target.checked)}
+                            type="checkbox"
+                          />
+                          מזל בלבד
                         </label>
                       </td>
                       <td>
@@ -649,7 +675,7 @@ export default function SettingsPage() {
                 <thead>
                   <tr>
                     <th>כוכב</th>
-                    <th>בית</th>
+                    {activeSettings.planet.signOnly ? null : <th>בית</th>}
                     {activeSettings.planet.houseOnly ? null : <th>מזל</th>}
                     {activeSettings.columns.map((column, columnIndex) => (
                       <th key={column.id}>
@@ -709,11 +735,16 @@ export default function SettingsPage() {
                   {activeSettings.rows.map((row) => (
                     <tr key={row.id}>
                       <td style={{ padding: '10px' }}>{activeSettings.planet.label}</td>
-                      <td style={{ padding: '10px' }}>בית {row.house}</td>
+                      {activeSettings.planet.signOnly ? null : <td style={{ padding: '10px' }}>בית {row.house}</td>}
                       {activeSettings.planet.houseOnly ? null : <td style={{ padding: '10px' }}>{getSignLabel(row.sign)}</td>}
                       {activeSettings.columns.map((column) => {
                         const content = getCellContent(row, column.id);
-                        const subtitle = `בית ${row.house} ${!activeSettings.planet.houseOnly ? `- ${getSignLabel(row.sign)}` : ''} | ${column.title}`;
+                        const subtitle = `${[
+                          activeSettings.planet.signOnly ? null : `בית ${row.house}`,
+                          activeSettings.planet.houseOnly ? null : getSignLabel(row.sign),
+                        ]
+                          .filter(Boolean)
+                          .join(' - ')} | ${column.title}`;
                         return (
                           <td key={column.id}>
                             <div

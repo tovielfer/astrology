@@ -30,6 +30,7 @@ export async function PUT(request: Request) {
           sortOrder: planet.sortOrder,
           isActive: planet.isActive,
           houseOnly: planet.houseOnly,
+          signOnly: planet.signOnly,
         },
       }),
     ),
