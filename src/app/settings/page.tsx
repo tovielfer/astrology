@@ -499,14 +499,14 @@ export default function SettingsPage() {
                 value={newPlanetLabel}
                 onChange={(event) => setNewPlanetLabel(event.target.value)}
               />
-              <button disabled={isLoading || !newPlanetLabel.trim()} onClick={handleAddPlanet} type="button">
+              <button className={isLoading ? "loading" : ""} disabled={isLoading || !newPlanetLabel.trim()} onClick={handleAddPlanet} type="button">
                 הוספת כוכב
               </button>
               {hasUnsavedPlanets ? (
                 <span className="unsaved-badge">● שינויים לא שמורים</span>
               ) : null}
               <button
-                className={hasUnsavedPlanets ? "primary-button" : ""}
+                className={`${hasUnsavedPlanets ? "primary-button" : ""} ${isLoading ? "loading" : ""}`}
                 disabled={isLoading || planets.length === 0}
                 onClick={handleSavePlanets}
                 type="button"
@@ -604,7 +604,7 @@ export default function SettingsPage() {
                 <button disabled={isLoading} onClick={addColumn} type="button">
                   הוספת עמודה
                 </button>
-                <label className={`file-button ${isLoading ? "disabled" : ""}`}>
+                <label className={`file-button ${isLoading ? "disabled loading" : ""}`}>
                   ייבוא PDF
                   <input
                     accept="application/pdf"
@@ -616,7 +616,7 @@ export default function SettingsPage() {
                     type="file"
                   />
                 </label>
-                <label className={`file-button ${isLoading ? "disabled" : ""}`}>
+                <label className={`file-button ${isLoading ? "disabled loading" : ""}`}>
                   ייבוא CSV
                   <input
                     accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -632,7 +632,7 @@ export default function SettingsPage() {
                   <span className="unsaved-badge">● שינויים לא שמורים</span>
                 ) : null}
                 <button
-                  className={hasUnsavedChanges ? "primary-button" : ""}
+                  className={`${hasUnsavedChanges ? "primary-button" : ""} ${isLoading ? "loading" : ""}`}
                   disabled={isLoading}
                   onClick={handleSave}
                   type="button"

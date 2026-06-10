@@ -324,7 +324,24 @@ button {
   transition: background 0.15s, opacity 0.15s;
 }
 
-button:disabled { opacity: 0.5; cursor: not-allowed; }
+button:disabled { opacity: 0.5; cursor: default; }
+button.loading:disabled { cursor: wait; }
+
+.spinner {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.75s linear infinite;
+  margin-inline-end: 8px;
+  vertical-align: text-bottom;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
 
 .btn-generate {
   background: var(--accent);
@@ -568,7 +585,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   font-weight: 600;
 }
 
-.file-button.disabled { cursor: not-allowed; opacity: 0.55; }
+.file-button.disabled { cursor: default; opacity: 0.55; }
 .file-button input { display: none; }
 
 .planets-table { width: 100%; }
@@ -603,6 +620,38 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .modal-add-row { margin-bottom: 16px; }
 .settings-table textarea { min-width: 260px; min-height: 120px; }
+
+/* ─── Loading Overlay ─── */
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(4px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.loading-overlay p {
+  margin-top: 20px;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.loading-spinner {
+  width: 60px;
+  height: 60px;
+  border: 5px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
 
 /* ─── Responsive ─── */
 @media (max-width: 600px) {

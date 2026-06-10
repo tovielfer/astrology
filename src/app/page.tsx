@@ -347,7 +347,7 @@ export default function Home() {
       throw new Error(data.message ?? "יצירת הדוח נכשלה.");
     }
     const pdf = await reportRes.blob();
-    downloadBlob(pdf, getDownloadFileName(reportRes.headers.get("Content-Disposition")));
+    openBlobInNewTab(pdf);
     setStatus(`הדוח עבור "${name}" נוצר בהצלחה.`);
   }
 
@@ -433,8 +433,15 @@ export default function Home() {
               onSignChange={setSign}
             />
 
-            <button type="submit" className="btn-generate" disabled={isLoading}>
-              {isLoading ? "מייצר דוח..." : "צור דוח PDF ↓"}
+            <button type="submit" className={`btn-generate ${isLoading ? "loading" : ""}`} disabled={isLoading}>
+              {isLoading ? (
+                <>
+                  <span className="spinner" />
+                  מייצר דוח...
+                </>
+              ) : (
+                "צור דוח PDF ↓"
+              )}
             </button>
           </form>
         </section>
@@ -511,13 +518,28 @@ export default function Home() {
 
             <button
               type="button"
-              className="btn-generate"
+              className={`btn-generate ${isLoading ? "loading" : ""}`}
               disabled={isLoading}
               onClick={handleModalGenerate}
             >
-              {isLoading ? "מייצר דוח..." : "צור דוח PDF ↓"}
+              {isLoading ? (
+                <>
+                  <span className="spinner" />
+                  מייצר דוח...
+                </>
+              ) : (
+                "צור דוח PDF ↓"
+              )}
             </button>
           </div>
+        </div>
+      )}
+
+      {/* ── Loading Overlay ── */}
+      {isLoading && (
+        <div className="loading-overlay">
+          <div className="loading-spinner"></div>
+          <p>מייצר דוח, אנא המתן...</p>
         </div>
       )}
     </main>
@@ -526,15 +548,12 @@ export default function Home() {
 
 // ─── Utils ────────────────────────────────────────────────────────────────────
 
-function downloadBlob(blob: Blob, fileName: string) {
+function openBlobInNewTab(blob: Blob) {
   const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = fileName;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
+  window.open(url, "_blank");
+  // Optional: revoke after some time if you want to save memory, 
+  // but if you revoke immediately the new tab might not be able to load it.
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
 
 function getDownloadFileName(contentDisposition: string | null) {
