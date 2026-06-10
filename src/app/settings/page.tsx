@@ -90,10 +90,10 @@ export default function SettingsPage() {
         fetch("/api/planets"),
         fetch("/api/settings/interpretations"),
       ]);
-      const [planetsData, settingsData] = (await Promise.all([
-        planetsResponse.json(),
-        settingsResponse.json(),
-      ])) as [PlanetRecord[], PlanetSettings[]];
+      const [planetsData, settingsData] = await Promise.all([
+        safeParseJson<PlanetRecord[]>(planetsResponse, "/api/planets"),
+        safeParseJson<PlanetSettings[]>(settingsResponse, "/api/settings/interpretations"),
+      ]);
 
       setPlanets(planetsData);
       setSettings(settingsData);
@@ -134,7 +134,7 @@ export default function SettingsPage() {
           cells,
         }),
       });
-      const saved = (await response.json()) as PlanetSettings;
+      const saved = await safeParseJson<PlanetSettings>(response, "/api/settings/interpretations");
 
       setSettings((current) => current.map((item) => (item.planetId === saved.planetId ? saved : item)));
       setHasUnsavedChanges(false);
@@ -249,7 +249,7 @@ export default function SettingsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ label }),
       });
-      const planet = (await response.json()) as PlanetRecord;
+      const planet = await safeParseJson<PlanetRecord>(response, "/api/planets");
 
       setNewPlanetLabel("");
       await loadSettings();
@@ -273,7 +273,7 @@ export default function SettingsPage() {
           })),
         }),
       });
-      const savedPlanets = (await response.json()) as PlanetRecord[];
+      const savedPlanets = await safeParseJson<PlanetRecord[]>(response, "/api/planets");
 
       setPlanets(savedPlanets);
       setHasUnsavedPlanets(false);
@@ -329,7 +329,7 @@ export default function SettingsPage() {
         method: "POST",
         body: formData,
       });
-      const data = (await response.json()) as ImportedCsvSettings | { message?: string };
+      const data = await safeParseJson<ImportedCsvSettings | { message?: string }>(response, "/api/settings/interpretations/import-pdf");
 
       if (!response.ok) {
         throw new Error("message" in data && data.message ? data.message : "ייבוא ה-PDF נכשל.");
@@ -354,7 +354,7 @@ export default function SettingsPage() {
         method: "POST",
         body: formData,
       });
-      const data = (await response.json()) as ImportedFileSettings | { message?: string };
+      const data = await safeParseJson<ImportedFileSettings | { message?: string }>(response, "/api/settings/interpretations/import-csv");
 
       if (!response.ok) {
         throw new Error("message" in data && data.message ? data.message : "ייבוא ה-CSV נכשל.");
@@ -819,6 +819,16 @@ export default function SettingsPage() {
       )}
     </main>
   );
+}
+
+async function safeParseJson<T>(response: Response, url: string): Promise<T> {
+  const text = await response.text();
+  try {
+    return (text ? JSON.parse(text) : {}) as T;
+  } catch (error) {
+    console.error(`[JSON Parse Error] ${url} (Status: ${response.status}):`, text);
+    throw new Error(`שגיאת שרת בכתובת ${url} (סטטוס ${response.status}). התשובה שהתקבלה: ${text.substring(0, 100)}...`);
+  }
 }
 
 function getCellContent(row: InterpretationRow, columnId: string) {
