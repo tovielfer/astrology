@@ -71,6 +71,8 @@ export default function SettingsPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [hasUnsavedPlanets, setHasUnsavedPlanets] = useState(false);
+  const [editingCell, setEditingCell] = useState<{rowId: string, columnId: string, content: string, subtitle: string} | null>(null);
+  const [editingColumn, setEditingColumn] = useState<{columnId: string, title: string} | null>(null);
 
   const activeSettings = useMemo(
     () => settings.find((item) => item.planetId === activePlanetId),
@@ -652,34 +654,50 @@ export default function SettingsPage() {
                     {activeSettings.columns.map((column, columnIndex) => (
                       <th key={column.id}>
                         <div className="column-header">
-                          <input
-                            aria-label="שם עמודה"
-                            value={column.title}
-                            onChange={(event) => updateColumnTitle(column.id, event.target.value)}
-                          />
+                          <div className="column-title-display">
+                            <span style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', flex: 1 }}>{column.title}</span>
+                            <button
+                              className="btn-sm btn-outline"
+                              onClick={() => setEditingColumn({ columnId: column.id, title: column.title })}
+                              type="button"
+                              style={{ flexShrink: 0 }}
+                            >
+                              ✎ עריכה
+                            </button>
+                          </div>
                           <div className="column-actions">
                             <button
                               aria-label="הזזת עמודה ימינה"
+                              title="הזזת עמודה ימינה"
                               disabled={columnIndex === 0}
                               onClick={() => moveColumn(column.id, -1)}
                               type="button"
+                              className="icon-button"
                             >
-                              ימינה
+                              →
                             </button>
                             <button
                               aria-label="הזזת עמודה שמאלה"
+                              title="הזזת עמודה שמאלה"
                               disabled={columnIndex === activeSettings.columns.length - 1}
                               onClick={() => moveColumn(column.id, 1)}
                               type="button"
+                              className="icon-button"
                             >
-                              שמאלה
+                              ←
                             </button>
                             <button
-                              className="danger-button"
-                              onClick={() => deleteColumn(column.id)}
+                              aria-label="מחיקת עמודה"
+                              title="מחיקת עמודה"
+                              className="icon-button danger-icon-button"
+                              onClick={() => {
+                                if (confirm(`האם בטוח שברצונך למחוק את העמודה "${column.title}"?`)) {
+                                  deleteColumn(column.id);
+                                }
+                              }}
                               type="button"
                             >
-                              מחיקה
+                              🗑
                             </button>
                           </div>
                         </div>
@@ -690,17 +708,24 @@ export default function SettingsPage() {
                 <tbody>
                   {activeSettings.rows.map((row) => (
                     <tr key={row.id}>
-                      <td>{activeSettings.planet.label}</td>
-                      <td>בית {row.house}</td>
-                      {activeSettings.planet.houseOnly ? null : <td>{getSignLabel(row.sign)}</td>}
-                      {activeSettings.columns.map((column) => (
-                        <td key={column.id}>
-                          <textarea
-                            value={getCellContent(row, column.id)}
-                            onChange={(event) => updateCell(row.id, column.id, event.target.value)}
-                          />
-                        </td>
-                      ))}
+                      <td style={{ padding: '10px' }}>{activeSettings.planet.label}</td>
+                      <td style={{ padding: '10px' }}>בית {row.house}</td>
+                      {activeSettings.planet.houseOnly ? null : <td style={{ padding: '10px' }}>{getSignLabel(row.sign)}</td>}
+                      {activeSettings.columns.map((column) => {
+                        const content = getCellContent(row, column.id);
+                        const subtitle = `בית ${row.house} ${!activeSettings.planet.houseOnly ? `- ${getSignLabel(row.sign)}` : ''} | ${column.title}`;
+                        return (
+                          <td key={column.id}>
+                            <div
+                              className="compact-cell-view"
+                              onClick={() => setEditingCell({ rowId: row.id, columnId: column.id, content, subtitle })}
+                              title="לחץ לעריכה"
+                            >
+                              {content ? content : <span className="placeholder">לחץ לעריכה...</span>}
+                            </div>
+                          </td>
+                        );
+                      })}
                     </tr>
                   ))}
                 </tbody>
@@ -711,12 +736,87 @@ export default function SettingsPage() {
             ) : null}
           </>
         ) : (
-          <p className="status">טוען הגדרות...</p>
+          <div className="loading-state">
+            <div className="loading-spinner"></div>
+            <p>טוען הגדרות...</p>
+          </div>
         )}
       </section>
 
       {status ? <p className="status success">{status}</p> : null}
       {error ? <p className="status error">{error}</p> : null}
+
+      {/* Cell Edit Modal */}
+      {editingCell && (
+        <div className="modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && setEditingCell(null)}>
+          <div className="modal" style={{ maxWidth: 600 }}>
+            <div className="modal-header" style={{ marginBottom: 16 }}>
+              <h3>עריכת תוכן</h3>
+              <button type="button" className="btn-close" onClick={() => setEditingCell(null)}>✕</button>
+            </div>
+            <p className="subsection-label">{editingCell.subtitle}</p>
+            <textarea
+              autoFocus
+              value={editingCell.content}
+              onChange={(e) => setEditingCell({ ...editingCell, content: e.target.value })}
+              style={{ minHeight: 200, width: '100%', marginBottom: 16 }}
+            />
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button type="button" className="secondary-button" onClick={() => setEditingCell(null)}>ביטול</button>
+              <button
+                type="button"
+                className="primary-button"
+                style={{ padding: '8px 16px', borderRadius: '8px' }}
+                onClick={() => {
+                  updateCell(editingCell.rowId, editingCell.columnId, editingCell.content);
+                  setEditingCell(null);
+                }}
+              >
+                שמור תוכן
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Column Edit Modal */}
+      {editingColumn && (
+        <div className="modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && setEditingColumn(null)}>
+          <div className="modal" style={{ maxWidth: 400 }}>
+            <div className="modal-header" style={{ marginBottom: 16 }}>
+              <h3>עריכת שם עמודה</h3>
+              <button type="button" className="btn-close" onClick={() => setEditingColumn(null)}>✕</button>
+            </div>
+            <textarea
+              autoFocus
+              value={editingColumn.title}
+              onChange={(e) => setEditingColumn({ ...editingColumn, title: e.target.value })}
+              style={{ marginBottom: 16, minHeight: 80, width: '100%' }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  updateColumnTitle(editingColumn.columnId, editingColumn.title);
+                  setEditingColumn(null);
+                }
+              }}
+            />
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button type="button" className="secondary-button" onClick={() => setEditingColumn(null)}>ביטול</button>
+              <button
+                type="button"
+                className="primary-button"
+                style={{ padding: '8px 16px', borderRadius: '8px' }}
+                onClick={() => {
+                  updateColumnTitle(editingColumn.columnId, editingColumn.title);
+                  setEditingColumn(null);
+                }}
+              >
+                שמור שם
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

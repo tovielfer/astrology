@@ -227,6 +227,7 @@ export default function Home() {
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
 
   const activePlanets = useMemo(() => planets.filter((p) => p.isActive), [planets]);
   const planetById = useMemo(() => new Map(planets.map((p) => [p.id, p])), [planets]);
@@ -236,14 +237,21 @@ export default function Home() {
   }, []);
 
   async function loadInitialData() {
-    const [pr, per] = await Promise.all([fetch("/api/planets"), fetch("/api/person")]);
-    const [planetsData, peopleData] = (await Promise.all([
-      pr.json(),
-      per.json(),
-    ])) as [PlanetRecord[], Person[]];
-    setPlanets(planetsData);
-    setPeople(peopleData);
-    setPositions(buildEmptyPositions(planetsData.filter((p) => p.isActive)));
+    setIsInitialLoading(true);
+    try {
+      const [pr, per] = await Promise.all([fetch("/api/planets"), fetch("/api/person")]);
+      const [planetsData, peopleData] = (await Promise.all([
+        pr.json(),
+        per.json(),
+      ])) as [PlanetRecord[], Person[]];
+      setPlanets(planetsData);
+      setPeople(peopleData);
+      setPositions(buildEmptyPositions(planetsData.filter((p) => p.isActive)));
+    } catch (err) {
+      console.error("Failed to load initial data", err);
+    } finally {
+      setIsInitialLoading(false);
+    }
   }
 
   async function refreshPeople() {
@@ -434,7 +442,7 @@ export default function Home() {
               onSignChange={setSign}
             />
 
-            <button type="submit" className={`btn-generate ${isLoading ? "loading" : ""}`} disabled={isLoading}>
+            <button type="submit" className={`btn-generate ${isLoading ? "loading" : ""}`} disabled={isLoading || isInitialLoading}>
               {isLoading ? (
                 <>
                   <span className="spinner" />
@@ -451,7 +459,7 @@ export default function Home() {
         <section className="card past-card">
           <h2 className="section-title">
             דוחות קודמים
-            {people.length > 0 && <span className="count-badge">{people.length}</span>}
+            {!isInitialLoading && people.length > 0 && <span className="count-badge">{people.length}</span>}
           </h2>
 
           {people.length === 0 ? (
@@ -537,10 +545,10 @@ export default function Home() {
       )}
 
       {/* ── Loading Overlay ── */}
-      {isLoading && (
+      {(isLoading || isInitialLoading) && (
         <div className="loading-overlay">
           <div className="loading-spinner"></div>
-          <p>מייצר דוח, אנא המתן...</p>
+          <p>{isInitialLoading ? "טוען נתונים..." : "מייצר דוח, אנא המתן..."}</p>
         </div>
       )}
     </main>
