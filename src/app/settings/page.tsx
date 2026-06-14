@@ -85,24 +85,44 @@ export default function SettingsPage() {
     void loadSettings();
   }, []);
 
+  useEffect(() => {
+    if (!activePlanetId || activeSettings) {
+      return;
+    }
+
+    void loadPlanetSettings(activePlanetId);
+  }, [activePlanetId, activeSettings]);
+
   async function loadSettings() {
     await runAction(async () => {
-      const [planetsResponse, settingsResponse] = await Promise.all([
-        fetch("/api/planets"),
-        fetch("/api/settings/interpretations"),
-      ]);
-      const [planetsData, settingsData] = await Promise.all([
-        safeParseJson<PlanetRecord[]>(planetsResponse, "/api/planets"),
-        safeParseJson<PlanetSettings[]>(settingsResponse, "/api/settings/interpretations"),
-      ]);
+      const planetsResponse = await fetch("/api/planets");
+      const planetsData = await safeParseJson<PlanetRecord[]>(planetsResponse, "/api/planets");
+      const firstActivePlanetId = planetsData.find((planet) => planet.isActive)?.id ?? "";
 
       setPlanets(planetsData);
-      setSettings(settingsData);
-      if (!activePlanetId && settingsData[0]) {
-        setActivePlanetId(settingsData[0].planetId);
-      } else if (activePlanetId && !settingsData.some((item) => item.planetId === activePlanetId)) {
-        setActivePlanetId(settingsData[0]?.planetId ?? "");
+      if (!activePlanetId) {
+        setActivePlanetId(firstActivePlanetId);
+      } else if (activePlanetId && !planetsData.some((planet) => planet.id === activePlanetId && planet.isActive)) {
+        setActivePlanetId(firstActivePlanetId);
       }
+    });
+  }
+
+  async function loadPlanetSettings(planetId: string) {
+    await runAction(async () => {
+      const url = `/api/settings/interpretations?planetId=${encodeURIComponent(planetId)}`;
+      const response = await fetch(url);
+      const loadedSettings = await safeParseJson<PlanetSettings>(response, url);
+
+      setSettings((current) => {
+        const existing = current.some((item) => item.planetId === loadedSettings.planetId);
+
+        if (existing) {
+          return current.map((item) => (item.planetId === loadedSettings.planetId ? loadedSettings : item));
+        }
+
+        return [...current, loadedSettings];
+      });
     });
   }
 
@@ -137,7 +157,15 @@ export default function SettingsPage() {
       });
       const saved = await safeParseJson<PlanetSettings>(response, "/api/settings/interpretations");
 
-      setSettings((current) => current.map((item) => (item.planetId === saved.planetId ? saved : item)));
+      setSettings((current) => {
+        const existing = current.some((item) => item.planetId === saved.planetId);
+
+        if (existing) {
+          return current.map((item) => (item.planetId === saved.planetId ? saved : item));
+        }
+
+        return [...current, saved];
+      });
       setHasUnsavedChanges(false);
       setStatus("ההגדרות נשמרו בהצלחה.");
     });
@@ -289,10 +317,22 @@ export default function SettingsPage() {
         }),
       });
       const savedPlanets = await safeParseJson<PlanetRecord[]>(response, "/api/planets");
+      const firstActivePlanetId = savedPlanets.find((planet) => planet.isActive)?.id ?? "";
+      const savedPlanetById = new Map(savedPlanets.map((planet) => [planet.id, planet]));
 
       setPlanets(savedPlanets);
+      setSettings((current) =>
+        current
+          .filter((item) => savedPlanetById.has(item.planetId))
+          .map((item) => ({
+            ...item,
+            planet: savedPlanetById.get(item.planetId) ?? item.planet,
+          })),
+      );
+      if (!savedPlanets.some((planet) => planet.id === activePlanetId && planet.isActive)) {
+        setActivePlanetId(firstActivePlanetId);
+      }
       setHasUnsavedPlanets(false);
-      await loadSettings();
       setStatus("רשימת הכוכבים נשמרה.");
     });
   }

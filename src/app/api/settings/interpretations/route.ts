@@ -1,8 +1,21 @@
 import { NextResponse } from "next/server";
-import { getAllInterpretationSettings, savePlanetInterpretationSettings } from "@/lib/interpretation-settings";
+import {
+  getAllInterpretationSettings,
+  getPlanetInterpretationSettings,
+  savePlanetInterpretationSettings,
+} from "@/lib/interpretation-settings";
 import { saveInterpretationSettingsSchema } from "@/lib/validation";
 
-export async function GET() {
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const planetId = searchParams.get("planetId");
+
+  if (planetId) {
+    const settings = await getPlanetInterpretationSettings(planetId);
+
+    return NextResponse.json(settings);
+  }
+
   const settings = await getAllInterpretationSettings();
 
   return NextResponse.json(settings);

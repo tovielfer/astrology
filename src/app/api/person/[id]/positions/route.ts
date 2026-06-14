@@ -17,8 +17,19 @@ export async function POST(request: Request, context: RouteContext) {
     return NextResponse.json({ message: "Person not found" }, { status: 404 });
   }
 
-  await Promise.all(
-    positions.map((position) =>
+  const filledPositions = positions.filter((position) => position.house !== null || position.sign !== null);
+  const emptyPlanetIds = positions
+    .filter((position) => position.house === null && position.sign === null)
+    .map((position) => position.planetId);
+
+  await prisma.$transaction([
+    prisma.planetPosition.deleteMany({
+      where: {
+        personId,
+        planetId: { in: emptyPlanetIds },
+      },
+    }),
+    ...filledPositions.map((position) =>
       prisma.planetPosition.upsert({
         where: {
           personId_planetId: {
@@ -38,11 +49,16 @@ export async function POST(request: Request, context: RouteContext) {
         },
       }),
     ),
-  );
+  ]);
 
   const updated = await prisma.person.findUnique({
     where: { id: personId },
-    include: { positions: { include: { planet: true } } },
+    include: {
+      positions: {
+        include: { planet: true },
+        orderBy: { planet: { sortOrder: "asc" } },
+      },
+    },
   });
 
   return NextResponse.json(updated);

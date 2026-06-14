@@ -264,11 +264,6 @@ export default function Home() {
     }
   }
 
-  async function refreshPeople() {
-    const res = await fetch("/api/person");
-    setPeople((await res.json()) as Person[]);
-  }
-
   // ── Position updaters ─────────────────────────────────────────────────────
 
   function setHouse(index: number, house: number | null) {
@@ -304,8 +299,8 @@ export default function Home() {
       });
       if (!personRes.ok) throw new Error("יצירת האדם נכשלה.");
       const person = (await personRes.json()) as Person;
-      await saveAndGenerate(person.id, filled, personName);
-      await refreshPeople();
+      const updatedPerson = await saveAndGenerate(person.id, positions, personName);
+      setPeople((current) => [updatedPerson, ...current.filter((item) => item.id !== updatedPerson.id)]);
       const name = personName;
       setPersonName("");
       setPositions(buildEmptyPositions(activePlanets));
@@ -340,8 +335,10 @@ export default function Home() {
       return;
     }
     await runAction(async () => {
-      await saveAndGenerate(modalPerson.id, filled, modalPerson.name);
-      await refreshPeople();
+      const updatedPerson = await saveAndGenerate(modalPerson.id, modalPositions, modalPerson.name);
+      setPeople((current) =>
+        current.map((person) => (person.id === updatedPerson.id ? updatedPerson : person)),
+      );
       closeModal();
     });
   }
@@ -355,6 +352,7 @@ export default function Home() {
       body: JSON.stringify({ positions: filled }),
     });
     if (!posRes.ok) throw new Error("שמירת המיקומים נכשלה.");
+    const updatedPerson = (await posRes.json()) as Person;
 
     const reportRes = await fetch("/api/report/generate", {
       method: "POST",
@@ -369,6 +367,7 @@ export default function Home() {
     openBlobInNewTab(pdf);
     downloadBlob(pdf, getDownloadFileName(reportRes.headers.get("Content-Disposition")));
     setStatus(`הדוח עבור "${name}" נוצר בהצלחה.`);
+    return updatedPerson;
   }
 
   async function handleDelete(personId: string, name: string) {
@@ -376,7 +375,7 @@ export default function Home() {
     await runAction(async () => {
       const res = await fetch(`/api/person/${personId}`, { method: "DELETE" });
       if (!res.ok) throw new Error("מחיקת הדוח נכשלה.");
-      await refreshPeople();
+      setPeople((current) => current.filter((person) => person.id !== personId));
       setStatus(`הדוח של "${name}" נמחק.`);
     });
   }
@@ -384,17 +383,23 @@ export default function Home() {
   async function handleDownload(personId: string, name: string) {
     const person = people.find((p) => p.id === personId);
     if (!person) return;
-    const filled = loadPersonPositions(activePlanets, person).filter((p) => {
+    const personPositions = loadPersonPositions(activePlanets, person);
+    const filled = personPositions.filter((p) => {
       const planet = planetById.get(p.planetId);
       if (planet?.houseOnly) return p.house !== null;
       if (planet?.signOnly) return p.sign !== null;
-      return p.house !== null && p.sign !== null;
+      return p.house !== null || p.sign !== null;
     });
     if (filled.length === 0) {
       setError("אין מיקומים מלאים לייצוא דוח.");
       return;
     }
-    await runAction(() => saveAndGenerate(personId, filled, name));
+    await runAction(async () => {
+      const updatedPerson = await saveAndGenerate(personId, personPositions, name);
+      setPeople((current) =>
+        current.map((person) => (person.id === updatedPerson.id ? updatedPerson : person)),
+      );
+    });
   }
 
   async function runAction(action: () => Promise<void>) {
