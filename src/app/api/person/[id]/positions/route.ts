@@ -18,37 +18,27 @@ export async function POST(request: Request, context: RouteContext) {
   }
 
   const filledPositions = positions.filter((position) => position.house !== null || position.sign !== null);
-  const emptyPlanetIds = positions
-    .filter((position) => position.house === null && position.sign === null)
-    .map((position) => position.planetId);
+  const planetIds = positions.map((position) => position.planetId);
 
   await prisma.$transaction([
     prisma.planetPosition.deleteMany({
       where: {
         personId,
-        planetId: { in: emptyPlanetIds },
+        planetId: { in: planetIds },
       },
     }),
-    ...filledPositions.map((position) =>
-      prisma.planetPosition.upsert({
-        where: {
-          personId_planetId: {
-            personId,
-            planetId: position.planetId,
-          },
-        },
-        update: {
-          house: position.house,
-          sign: position.sign,
-        },
-        create: {
-          person: { connect: { id: personId } },
-          planet: { connect: { id: position.planetId } },
-          house: position.house,
-          sign: position.sign,
-        },
-      }),
-    ),
+    ...(filledPositions.length > 0
+      ? [
+          prisma.planetPosition.createMany({
+            data: filledPositions.map((position) => ({
+              personId,
+              planetId: position.planetId,
+              house: position.house,
+              sign: position.sign,
+            })),
+          }),
+        ]
+      : []),
   ]);
 
   const updated = await prisma.person.findUnique({
