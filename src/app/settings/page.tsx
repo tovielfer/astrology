@@ -17,6 +17,8 @@ type InterpretationColumn = {
   id: string;
   title: string;
   sortOrder: number;
+  forHouse: boolean;
+  forSign: boolean;
 };
 
 type InterpretationCell = {
@@ -136,6 +138,8 @@ export default function SettingsPage() {
         clientId: column.id,
         title: column.title,
         sortOrder: index,
+        forHouse: column.forHouse,
+        forSign: column.forSign,
       }));
 
       const cells = activeSettings.rows.flatMap((row) =>
@@ -180,6 +184,8 @@ export default function SettingsPage() {
           id: `new-${Date.now()}`,
           title: "עמודה חדשה",
           sortOrder: current.columns.length,
+          forHouse: true,
+          forSign: true,
         },
       ],
     }));
@@ -189,6 +195,15 @@ export default function SettingsPage() {
     updateActiveSettings((current) => ({
       ...current,
       columns: current.columns.map((column) => (column.id === columnId ? { ...column, title } : column)),
+    }));
+  }
+
+  function updateColumnScope(columnId: string, scope: "forHouse" | "forSign", value: boolean) {
+    updateActiveSettings((current) => ({
+      ...current,
+      columns: current.columns.map((column) =>
+        column.id === columnId ? { ...column, [scope]: value } : column,
+      ),
     }));
   }
 
@@ -442,6 +457,8 @@ export default function SettingsPage() {
               id: column.id,
               title: column.title,
               sortOrder: item.columns.length + index,
+              forHouse: true,
+              forSign: true,
             })),
           ],
           rows: item.rows.map((row) => ({
@@ -479,6 +496,8 @@ export default function SettingsPage() {
               id: importedColumnId,
               title: importedSettings.columnTitle,
               sortOrder: item.columns.length,
+              forHouse: true,
+              forSign: true,
             },
           ],
           rows: item.rows.map((row) => ({
@@ -730,6 +749,28 @@ export default function SettingsPage() {
                             >
                               ✎ עריכה
                             </button>
+                          </div>
+                          <div className="column-scope">
+                            {activeSettings.planet.signOnly ? null : (
+                              <label className="inline-check">
+                                <input
+                                  checked={column.forHouse}
+                                  onChange={(event) => updateColumnScope(column.id, "forHouse", event.target.checked)}
+                                  type="checkbox"
+                                />
+                                בית
+                              </label>
+                            )}
+                            {activeSettings.planet.houseOnly ? null : (
+                              <label className="inline-check">
+                                <input
+                                  checked={column.forSign}
+                                  onChange={(event) => updateColumnScope(column.id, "forSign", event.target.checked)}
+                                  type="checkbox"
+                                />
+                                מזל
+                              </label>
+                            )}
                           </div>
                           <div className="column-actions">
                             <button

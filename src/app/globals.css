@@ -586,6 +586,8 @@ button.loading:disabled { cursor: wait; }
 .column-header { display: grid; gap: 8px; }
 .column-actions { display: flex; flex-wrap: wrap; gap: 6px; }
 .column-actions button { font-size: 13px; padding: 7px 10px; }
+.column-scope { display: flex; flex-wrap: wrap; gap: 12px; }
+.column-scope .inline-check { font-size: 13px; font-weight: 600; gap: 6px; }
 
 .icon-button {
   background: transparent;

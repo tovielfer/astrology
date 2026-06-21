@@ -1,6 +1,6 @@
 import path from "node:path";
 import { Document, Font, Page, StyleSheet, Text, View, renderToBuffer } from "@react-pdf/renderer";
-import { getSignLabel, type Sign } from "@/lib/astrology";
+import { getSignLabel, SIGNS, type Sign } from "@/lib/astrology";
 
 type Person = {
   name: string;
@@ -21,6 +21,8 @@ type PlanetPosition = {
 type InterpretationColumn = {
   id: string;
   title: string;
+  forHouse: boolean;
+  forSign: boolean;
 };
 
 type InterpretationCell = {
@@ -71,31 +73,31 @@ const styles = StyleSheet.create({
     fontFamily: "Rubik",
     fontSize: 11,
     color: "#1f2937",
-    lineHeight: 1.65,
-    paddingVertical: 62,
+    lineHeight: 1.4,
+    paddingVertical: 24,
     paddingHorizontal: 51,
     textAlign: "right",
   },
   cover: {
     borderBottomWidth: 2,
     borderBottomColor: "#d7c8aa",
-    marginBottom: 28,
-    paddingBottom: 18,
+    marginBottom: 12,
+    paddingBottom: 8,
   },
   coverTitle: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: "bold",
     color: "#4b3828",
-    lineHeight: 1.3,
-    marginBottom: 12,
+    lineHeight: 1.2,
+    marginBottom: 4,
   },
   meta: {
     color: "#6b7280",
     fontSize: 10,
-    marginTop: 6,
+    marginTop: 2,
   },
   planet: {
-    marginBottom: 28,
+    marginBottom: 10,
   },
   planetHeader: {
     flexDirection: "row",
@@ -103,12 +105,12 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     borderBottomWidth: 2,
     borderBottomColor: "#c9b89a",
-    paddingBottom: 6,
-    marginBottom: 12,
+    paddingBottom: 3,
+    marginBottom: 5,
   },
   planetTitle: {
     color: "#4b3828",
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: "bold",
   },
   position: {
@@ -116,13 +118,13 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   interpretation: {
-    marginTop: 12,
+    marginTop: 6,
   },
   interpretationTitle: {
     color: "#6f4e37",
     fontSize: 13,
     fontWeight: "bold",
-    marginBottom: 6,
+    marginBottom: 2,
     paddingRight: 8,
     borderRightWidth: 3,
     borderRightColor: "#c9b89a",
@@ -131,8 +133,8 @@ const styles = StyleSheet.create({
     color: "#4b3828",
     fontSize: 12,
     fontWeight: "bold",
-    marginTop: 10,
-    marginBottom: 2,
+    marginTop: 5,
+    marginBottom: 1,
   },
   itemContent: {
     color: "#374151",
@@ -140,6 +142,20 @@ const styles = StyleSheet.create({
   missing: {
     color: "#9ca3af",
     fontStyle: "italic",
+  },
+  handwriting: {
+    marginTop: 6,
+  },
+  handwritingLabel: {
+    color: "#4b3828",
+    fontSize: 12,
+    fontWeight: "bold",
+    marginBottom: 2,
+  },
+  handwritingLine: {
+    borderBottomWidth: 1,
+    borderBottomColor: "#c9b89a",
+    height: 20,
   },
 });
 
@@ -153,31 +169,41 @@ function buildSectionGroups(section: ReportSection): InterpretationGroup[] {
   const signLabelText = position.sign ? getSignLabel(position.sign) : null;
 
   const candidates = [
-    ...(position.house !== null ? [{ title: `פירוש לפי בית ${position.house}`, row: houseRow }] : []),
-    ...(signLabelText ? [{ title: `פירוש לפי מזל ${signLabelText}`, row: signRow }] : []),
+    ...(signLabelText
+      ? [{ title: `פירוש לפי מזל ${signLabelText}`, row: signRow, dimension: "sign" as const }]
+      : []),
+    ...(position.house !== null
+      ? [{ title: `פירוש לפי בית ${position.house}`, row: houseRow, dimension: "house" as const }]
+      : []),
   ];
 
-  const seenRowIds = new Set<string>();
-  const uniqueGroups = candidates.filter((group): group is { title: string; row: InterpretationRow & { cells: InterpretationCell[] } } => {
-    if (!group.row || seenRowIds.has(group.row.id)) {
-      return false;
-    }
+  const presentGroups = candidates.filter(
+    (group): group is { title: string; row: InterpretationRow & { cells: InterpretationCell[] }; dimension: "house" | "sign" } =>
+      group.row !== null,
+  );
 
-    seenRowIds.add(group.row.id);
-    return true;
-  });
+  const seenCells = new Set<string>();
 
-  return uniqueGroups
+  return presentGroups
     .map((group) => ({
       title: group.title,
       items: columns
+        .filter((column) => (group.dimension === "house" ? column.forHouse : column.forSign))
         .map((column) => ({
           title: column.title,
           content: group.row.cells.find((cell) => cell.columnId === column.id)?.content.trim() ?? "",
+          cellKey: `${group.row.id}:${column.id}`,
         }))
-        .filter((item) => item.content)
+        .filter((item) => {
+          if (!item.content || seenCells.has(item.cellKey)) {
+            return false;
+          }
+
+          seenCells.add(item.cellKey);
+          return true;
+        })
         .map((item) => ({
-          ...item,
+          title: item.title,
           content: item.content
             .replace(/\r\n?/g, "\n")
             .replace(/[ \t]+$/gm, "")
@@ -188,6 +214,14 @@ function buildSectionGroups(section: ReportSection): InterpretationGroup[] {
         })),
     }))
     .filter((group) => group.items.length > 0);
+}
+
+function getHouseNaturalSign(section: ReportSection): Sign | null {
+  if (section.position.house === null) {
+    return null;
+  }
+
+  return section.houseRow?.sign ?? SIGNS[section.position.house - 1]?.value ?? null;
 }
 
 function PositionText({ house, signLabel }: { house: number | null; signLabel: string | null }) {
@@ -227,6 +261,7 @@ function ReportDocument({ person, sections }: { person: Person; sections: Report
         {sections.map((section, index) => {
           const signLabelText = section.position.sign ? getSignLabel(section.position.sign) : null;
           const groups = buildSectionGroups(section);
+          const houseNaturalSign = getHouseNaturalSign(section);
 
           return (
             <View key={index} style={styles.planet}>
@@ -250,6 +285,14 @@ function ReportDocument({ person, sections }: { person: Person; sections: Report
               ) : (
                 <Text style={styles.missing}>לא נמצאה פרשנות מתאימה.</Text>
               )}
+
+              {houseNaturalSign ? (
+                <View style={styles.handwriting}>
+                  <Text style={styles.handwritingLabel}>תכונות מזל {getSignLabel(houseNaturalSign)} (למילוי בכתב יד)</Text>
+                  <View style={styles.handwritingLine} />
+                  <View style={styles.handwritingLine} />
+                </View>
+              ) : null}
             </View>
           );
         })}

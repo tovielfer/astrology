@@ -14,6 +14,8 @@ export type SaveInterpretationSettingsInput = {
     clientId: string;
     title: string;
     sortOrder: number;
+    forHouse: boolean;
+    forSign: boolean;
   }>;
   cells: Array<{
     house: number;
@@ -137,6 +139,8 @@ export async function savePlanetInterpretationSettings(input: SaveInterpretation
               planetId: input.planetId,
               title: column.title,
               sortOrder: column.sortOrder,
+              forHouse: column.forHouse,
+              forSign: column.forSign,
             },
           });
           columnIdByClientId.set(column.clientId, created.id);
@@ -148,6 +152,8 @@ export async function savePlanetInterpretationSettings(input: SaveInterpretation
           data: {
             title: column.title,
             sortOrder: column.sortOrder,
+            forHouse: column.forHouse,
+            forSign: column.forSign,
           },
         });
         columnIdByClientId.set(column.clientId, updated.id);

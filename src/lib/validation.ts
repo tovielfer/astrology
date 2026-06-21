@@ -59,6 +59,8 @@ export const saveInterpretationSettingsSchema = z.object({
         clientId: z.string().min(1),
         title: z.string().trim().min(1, "Column title is required"),
         sortOrder: z.coerce.number().int().min(0),
+        forHouse: z.boolean().default(true),
+        forSign: z.boolean().default(true),
       }),
     ),
   cells: z.array(

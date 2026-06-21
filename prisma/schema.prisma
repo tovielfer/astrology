@@ -70,6 +70,8 @@ model InterpretationColumn {
   id        String               @id @default(cuid())
   title     String
   sortOrder Int
+  forHouse  Boolean              @default(true)
+  forSign   Boolean              @default(true)
   createdAt DateTime             @default(now())
   updatedAt DateTime             @updatedAt
   planetId  String

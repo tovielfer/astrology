@@ -5,6 +5,8 @@ type InterpretationColumn = {
   id: string;
   title: string;
   sortOrder: number;
+  forHouse: boolean;
+  forSign: boolean;
 };
 
 type InterpretationCell = {
